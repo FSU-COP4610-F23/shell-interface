@@ -5,6 +5,12 @@
 
 int main()
 {
+	lexer_parse_token();
+	return 0;
+}
+
+void lexer_parse_token()
+{
 	while (1) {
 		printf("> ");
 
@@ -23,8 +29,6 @@ int main()
 		free(input);
 		free_tokens(tokens);
 	}
-
-	return 0;
 }
 
 char *get_input(void) {

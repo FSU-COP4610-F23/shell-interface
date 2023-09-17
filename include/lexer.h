@@ -8,6 +8,7 @@ typedef struct {
     size_t size;
 } tokenlist;
 
+void lexer_parse_token(); 
 char * get_input(void);
 tokenlist * get_tokens(char *input);
 tokenlist * new_tokenlist(void);
