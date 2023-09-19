@@ -15,7 +15,7 @@
 ## Group Members 
 - **Jasmine Masopeh**: jd19@fsu.edu
 - **Angela Fields**: amf21l@fsu.edu  // hi 
-- **Juancarlo Alguera**: jpa22a@fsu.edu
+- **Juancarlo Alguera**: jpa22a@fsu.edu // hello
 ## Division of Labor
 
 ### Part 1: Prompt
