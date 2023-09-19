@@ -12,9 +12,9 @@
     By successfully completing this project, you will not only gain practical experience in process control, command-line parsing, and error handling, but also have the opportunity to build a robust and user-friendly shell interface that empowers users to efficiently interact with the operating system.
 ]
 
-## Group Members
+## Group Members 
 - **Jasmine Masopeh**: jd19@fsu.edu
-- **Angela Fields**: amf21l@fsu.edu
+- **Angela Fields**: amf21l@fsu.edu  // hi 
 - **Juancarlo Alguera**: jpa22a@fsu.edu
 ## Division of Labor
 
