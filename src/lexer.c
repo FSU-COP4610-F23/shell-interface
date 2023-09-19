@@ -5,14 +5,22 @@
 
 int main()
 {
+
 	lexer_parse_token();
+
 	return 0;
 }
 
 void lexer_parse_token()
 {
 	while (1) {
-		printf("> ");
+		printf("%s@%s:~%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
+		
+
+		// printf("USER : %s\n", getenv("USER"));
+		// printf("MACHINE : %s\n", getenv("MACHINE"));
+ 		// printf("PWD : %s\n", getenv("PWD"));
+
 
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
