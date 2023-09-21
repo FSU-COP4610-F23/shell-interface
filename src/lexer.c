@@ -12,12 +12,12 @@ int main()
 void lexer_parse_token()
 {
 	while (1) {
-		printf("> ");
-
+		//print out prompt
+		prompt();
+		
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
 		 */
-
 		char *input = get_input();
 		printf("whole input: %s\n", input);
 
@@ -25,10 +25,22 @@ void lexer_parse_token()
 		for (int i = 0; i < tokens->size; i++) {
 			printf("token %d: (%s)\n", i, tokens->items[i]);
 		}
-
 		free(input);
 		free_tokens(tokens);
 	}
+}
+
+void prompt()
+{
+	printf("%s@%s:~%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
+	// printf("USER : %s\n", getenv("USER"));
+	// printf("MACHINE : %s\n", getenv("MACHINE"));
+	// printf("PWD : %s\n", getenv("PWD"));
+}
+
+void environmentVariables()
+{
+	
 }
 
 char *get_input(void) {
