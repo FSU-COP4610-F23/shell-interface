@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 int main()
 {
 	lexer_parse_token();
@@ -12,7 +13,10 @@ int main()
 void lexer_parse_token()
 {
 	while (1) {
+
+		
 		//print out prompt
+		printf("\n");
 		prompt();
 		
 		/* input contains the whole command
@@ -25,8 +29,30 @@ void lexer_parse_token()
 		for (int i = 0; i < tokens->size; i++) {
 			printf("token %d: (%s)\n", i, tokens->items[i]);
 		}
+
+		// get enivonmental variables
+		for (int i = 0; i < tokens->size; i++) {
+			// printf("this should give me echo: %s\n", tokens->items[i]);
+			// printf("%c",tokens->items[i][0]);
+			int charCount = 0;
+			if (tokens->items[i][charCount] == '$')
+			{
+				// printf("%s", tokens->items[i--]);
+				char tokenItems[100] = "";
+				strcat(tokenItems, &tokens->items[i][1]);
+
+				printf("%s", getenv(tokenItems));
+			}
+			else 
+			{
+				printf("%s ", tokens->items[i]);
+			}
+
+		}
+		
 		free(input);
 		free_tokens(tokens);
+
 	}
 }
 
