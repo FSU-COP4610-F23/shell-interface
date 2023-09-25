@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 int main()
 {
 	lexer_parse_token();
@@ -12,13 +11,12 @@ int main()
 
 void lexer_parse_token()
 {
-	while (1) {
-
-		
-		//print out prompt
+	while (1)
+	{
+		// print out prompt
 		printf("\n");
 		prompt();
-		
+
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
 		 */
@@ -26,50 +24,49 @@ void lexer_parse_token()
 		printf("whole input: %s\n", input);
 
 		tokenlist *tokens = get_tokens(input);
-		for (int i = 0; i < tokens->size; i++) {
-			printf("token %d: (%s)\n", i, tokens->items[i]);
-		}
 
-		// get enivonmental variables
-		for (int i = 0; i < tokens->size; i++) {
-			// printf("this should give me echo: %s\n", tokens->items[i]);
-			// printf("%c",tokens->items[i][0]);
-			int charCount = 0;
-			if (tokens->items[i][charCount] == '$')
-			{
-				// printf("%s", tokens->items[i--]);
-				char tokenItems[100] = "";
-				strcat(tokenItems, &tokens->items[i][1]);
-
-				printf("%s", getenv(tokenItems));
-			}
-			else 
-			{
-				printf("%s ", tokens->items[i]);
-			}
-
-		}
+		environmentVariables(tokens);
+		printList(tokens);
 		
 		free(input);
 		free_tokens(tokens);
-
 	}
 }
 
+void printList(tokenlist * tokens)
+{
+	// print tokens
+	for (int i = 0; i < tokens->size; i++)
+	{
+		printf("token %d: (%s)\n", i, tokens->items[i]);
+	}
+	// print output
+	for (int i = 0; i < tokens->size; i++)
+	{
+		printf("%s ", tokens->items[i]);
+	}
+}
 void prompt()
 {
 	printf("%s@%s:~%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
-	// printf("USER : %s\n", getenv("USER"));
-	// printf("MACHINE : %s\n", getenv("MACHINE"));
-	// printf("PWD : %s\n", getenv("PWD"));
 }
 
-void environmentVariables()
+void environmentVariables(tokenlist *tokens)
 {
-	
+	// get environmental variable
+	for (int i = 0; i < tokens->size; i++)
+	{
+		if (tokens->items[i][0] == '$')
+		{
+			char tokenItems[100] = "";
+			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
+			strcpy(tokens->items[i], getenv(tokenItems));
+		}
+	}
 }
 
-char *get_input(void) {
+char *get_input(void)
+{
 	char *buffer = NULL;
 	int bufsize = 0;
 	char line[5];
@@ -92,7 +89,8 @@ char *get_input(void) {
 	return buffer;
 }
 
-tokenlist *new_tokenlist(void) {
+tokenlist *new_tokenlist(void)
+{
 	tokenlist *tokens = (tokenlist *)malloc(sizeof(tokenlist));
 	tokens->size = 0;
 	tokens->items = (char **)malloc(sizeof(char *));
@@ -100,7 +98,8 @@ tokenlist *new_tokenlist(void) {
 	return tokens;
 }
 
-void add_token(tokenlist *tokens, char *item) {
+void add_token(tokenlist *tokens, char *item)
+{
 	int i = tokens->size;
 
 	tokens->items = (char **)realloc(tokens->items, (i + 2) * sizeof(char *));
@@ -111,7 +110,8 @@ void add_token(tokenlist *tokens, char *item) {
 	tokens->size += 1;
 }
 
-tokenlist *get_tokens(char *input) {
+tokenlist *get_tokens(char *input)
+{
 	char *buf = (char *)malloc(strlen(input) + 1);
 	strcpy(buf, input);
 	tokenlist *tokens = new_tokenlist();
@@ -125,7 +125,8 @@ tokenlist *get_tokens(char *input) {
 	return tokens;
 }
 
-void free_tokens(tokenlist *tokens) {
+void free_tokens(tokenlist *tokens)
+{
 	for (int i = 0; i < tokens->size; i++)
 		free(tokens->items[i]);
 	free(tokens->items);
