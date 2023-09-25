@@ -28,8 +28,8 @@ void lexer_parse_token()
 		environmentVariables(tokens);
 		printList(tokens);
 		
-		free(input);
-		free_tokens(tokens);
+		// free(input);
+		// free_tokens(tokens);
 	}
 }
 
@@ -60,7 +60,9 @@ void environmentVariables(tokenlist *tokens)
 		{
 			char tokenItems[100] = "";
 			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
-			strcpy(tokens->items[i], getenv(tokenItems));
+			printf("This is the token item: %s", tokenItems);
+			strcpy(tokens->items[i], getenv(tokenItems)); // tokens->items[i] = getenv(tokenItems)
+			printf("This is the token item: %s", tokenItems);
 		}
 	}
 }
