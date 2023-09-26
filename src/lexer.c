@@ -6,6 +6,7 @@
 int main()
 {
 	lexer_parse_token();
+
 	return 0;
 }
 
@@ -26,10 +27,11 @@ void lexer_parse_token()
 		tokenlist *tokens = get_tokens(input);
 
 		environmentVariables(tokens);
+		tildeExpansion(tokens);
 		printList(tokens);
 		
-		// free(input);
-		// free_tokens(tokens);
+		free(input);
+		free_tokens(tokens);
 	}
 }
 
@@ -45,11 +47,14 @@ void printList(tokenlist * tokens)
 	{
 		printf("%s ", tokens->items[i]);
 	}
+	
 }
 void prompt()
 {
-	printf("%s@%s:~%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
+	printf("%s@%s:%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
 }
+
+
 
 void environmentVariables(tokenlist *tokens)
 {
@@ -58,9 +63,36 @@ void environmentVariables(tokenlist *tokens)
 	{
 		if (tokens->items[i][0] == '$')
 		{
-			char tokenItems[100] = "";
+			char tokenItems[20] = "";
 			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
 			strcpy(tokens->items[i], getenv(tokenItems)); // tokens->items[i] = getenv(tokenItems)
+		}
+	}
+
+}
+
+void tildeExpansion(tokenlist *tokens)
+{
+	// tilde expansion ls ~/dir1
+
+	for (int i = 0; i < tokens->size; i++)
+	{
+		if (tokens->items[i][0] == '~')
+		{
+			bool check = false; 
+			char tokenItems[50] = "";
+			if (tokens->items[i][1] == '/')
+			{
+				check = true;
+				strcat(tokenItems, &tokens->items[i][1]);
+			}
+				
+			strcpy(tokens->items[i], getenv("HOME"));
+
+			if (check)
+			{
+				strcat(tokens->items[i], tokenItems);
+			}
 		}
 	}
 }

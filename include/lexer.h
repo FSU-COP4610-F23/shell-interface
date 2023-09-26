@@ -7,6 +7,8 @@ typedef struct {
     char ** items;
     size_t size;
 } tokenlist;
+
+void tildeExpansion(tokenlist *);
 void freeTokens(char * input, tokenlist * tokens);
 void printList(tokenlist *); 
 void prompt();
