@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main()
+int main() // Edit check
 {
 	lexer_parse_token();
 	return 0;
