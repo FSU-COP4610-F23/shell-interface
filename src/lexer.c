@@ -17,28 +17,39 @@ void lexer_parse_token()
 		// print out prompt
 		printf("\n");
 		prompt();
-
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
 		 */
 		char *input = get_input();
 		printf("whole input: %s\n", input);
-
 		tokenlist *tokens = get_tokens(input);
-		
-		
 
-		for (int i = 0; i < tokens->size; i++) {
-			printf("token %d: (%s)\n", i, tokens->items[i]);
-		}
+		tokens->items[1] = environmentVariables(tokens);
+		tokens->items[1] = tildeExpansion(tokens);
+		// environmentVariables(tokens);
+		// tildeExpansion(tokens);
+		printList(tokens);
 
-		environmentVariables(tokens);
-		tildeExpansion(tokens);
-
-		
+		// free(input);
+		// free_tokens(tokens);
 		free(input);
 		free_tokens(tokens);
 	}
+}
+
+void printList(tokenlist * tokens)
+{
+	// print tokens
+	for (int i = 0; i < tokens->size; i++)
+	{
+		printf("token %d: (%s)\n", i, tokens->items[i]);
+	}
+	// print output
+	for (int i = 0; i < tokens->size; i++)
+	{
+		printf("%s ", tokens->items[i]);
+	}
+
 }
 
 void prompt()
@@ -46,55 +57,54 @@ void prompt()
 	printf("%s@%s:%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
 }
 
-void environmentVariables(tokenlist * tokens)
+char * environmentVariables(tokenlist *tokens)
 {
+	// get environmental variable
 	for (int i = 0; i < tokens->size; i++)
 	{
-		// printf("this should give me echo: %s\n", tokens->items[i]);
-		// printf("%c",tokens->items[i][0]);
-		// int charCount = 0;
 		if (tokens->items[i][0] == '$')
 		{
-			// printf("%s", tokens->items[i--]);
-			char tokenItems[100] = "";
-			strcat(tokenItems, &tokens->items[i][1]);
-
-			printf("%s", getenv(tokenItems));
-		}
-		else if (tokens->items[i][0] != '~' && tokens->items[i][0] != '$')
-		{
-			printf("%s ", tokens->items[i]);
+			// char tokenItems[100] = "";
+			char tokenItems[20] = "";
+			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
+			char * expand = malloc(sizeof(char) * strlen(getenv(tokenItems)));
+			strcpy(expand, getenv(tokenItems));
+			// strcpy(tokens->items[i], getenv(tokenItems)); // tokens->items[i] = getenv(tokenItems)
+			// free_tokens(tokens);
+			return expand;
 		}
 	}
+
+	return tokens->items[1];
 }
 
-void tildeExpansion(tokenlist * tokens)
+char * tildeExpansion(tokenlist *tokens)
 {
 	for (int i = 0; i < tokens->size; i++)
 	{
 		if (tokens->items[i][0] == '~')
 		{
-			bool check = false;
-			char tokenItems[100] = "";
+			char tokenItems[50] = "";
 			if (tokens->items[i][1] == '/')
 			{
-				check = true;
-				// printf("this is &token->items:%s\n", &tokens->items[i][1]);
+
 				strcat(tokenItems, &tokens->items[i][1]);
-				// printf("#3 starts here: %s", tokenItems);
 			}
-
-			printf("%s", getenv("HOME"));
-			// strcpy(tokens->items[i], getenv("HOME"));
-
-			if (check)
+			
+			else
 			{
-				// strcat(tokens->items[i], tokenItems);
-				printf("%s", tokenItems);
-				// printf("%s", tokens->items[i]);
+				char * expand = malloc(sizeof(char) * strlen(getenv("HOME")));
+				strcpy(expand, getenv("HOME"));
+				return expand;
 			}
+
+			char * expand2= malloc(sizeof(char) * (strlen(getenv("HOME")) + strlen(tokenItems)) + 1);
+			strcpy(expand2, getenv("HOME"));
+			strcat(expand2, tokenItems);
+			return expand2;
 		}
 	}
+	return tokens->items[1];
 }
 
 char *get_input(void)
@@ -165,3 +175,84 @@ void free_tokens(tokenlist *tokens)
 	free(tokens);
 }
 
+
+// void lexer_parse_token()
+// {
+// 	while (1)
+// 	{
+// 		// print out prompt
+// 		printf("\n");
+// 		prompt();
+
+// 		/* input contains the whole command
+// 		 * tokens contains substrings from input split by spaces
+// 		 */
+// 		char *input = get_input();
+// 		printf("whole input: %s\n", input);
+
+// 		tokenlist *tokens = get_tokens(input);
+
+// 		for (int i = 0; i < tokens->size; i++) {
+// 			printf("token %d: (%s)\n", i, tokens->items[i]);
+// 		}
+
+// 		environmentVariables(tokens);
+// 		tildeExpansion(tokens);
+
+// 		free(input);
+// 		free_tokens(tokens);
+// 	}
+// }
+
+
+
+// void environmentVariables(tokenlist * tokens)
+// {
+// 	for (int i = 0; i < tokens->size; i++)
+// 	{
+// 		// printf("this should give me echo: %s\n", tokens->items[i]);
+// 		// printf("%c",tokens->items[i][0]);
+// 		// int charCount = 0;
+// 		if (tokens->items[i][0] == '$')
+// 		{
+// 			// printf("%s", tokens->items[i--]);
+// 			char tokenItems[100] = "";
+// 			strcat(tokenItems, &tokens->items[i][1]);
+
+// 			printf("%s", getenv(tokenItems));
+// 		}
+// 		else if (tokens->items[i][0] != '~' && tokens->items[i][0] != '$')
+// 		{
+// 			printf("%s ", tokens->items[i]);
+// 		}
+// 	}
+// }
+
+// void tildeExpansion(tokenlist * tokens)
+// {
+// 	for (int i = 0; i < tokens->size; i++)
+// 	{
+// 		if (tokens->items[i][0] == '~')
+// 		{
+// 			bool check = false;
+// 			char tokenItems[100] = "";
+// 			if (tokens->items[i][1] == '/')
+// 			{
+// 				check = true;
+// 				// printf("this is &token->items:%s\n", &tokens->items[i][1]);
+// 				strcat(tokenItems, &tokens->items[i][1]);
+// 				// printf("#3 starts here: %s", tokenItems);
+// 			}
+
+// 			printf("%s", getenv("HOME"));
+// 			// strcpy(tokens->items[i], getenv("HOME"));
+
+// 			if (check)
+// 			{
+// 				// strcat(tokens->items[i], tokenItems);
+// 				printf("%s", tokenItems);
+// 				// printf("%s", tokens->items[i]);
+// 			}
+// 		}
+// 	}
+// }

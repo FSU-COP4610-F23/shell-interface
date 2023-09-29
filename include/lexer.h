@@ -8,9 +8,9 @@ typedef struct {
     size_t size;
 } tokenlist;
 
-void environmentVariables(tokenlist * tokens);
-void tildeExpansion(tokenlist * tokens);
-// void printList(tokenlist * tokens); 
+char * environmentVariables(tokenlist * tokens);
+char * tildeExpansion(tokenlist * tokens);
+void printList(tokenlist * tokens); 
 void prompt();
 void lexer_parse_token(); 
 
