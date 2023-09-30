@@ -90,7 +90,6 @@ char * tildeExpansion(tokenlist *tokens)
 
 				strcat(tokenItems, &tokens->items[i][1]);
 			}
-			
 			else
 			{
 				char * expand = malloc(sizeof(char) * strlen(getenv("HOME")));
@@ -107,6 +106,10 @@ char * tildeExpansion(tokenlist *tokens)
 	return tokens->items[1];
 }
 
+char * pathSearch(tokenlist * tokens)
+{
+	char tokenItems[50] = "";
+}
 char *get_input(void)
 {
 	char *buffer = NULL;
