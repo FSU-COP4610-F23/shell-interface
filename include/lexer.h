@@ -7,9 +7,14 @@ typedef struct {
     char ** items;
     size_t size;
 } tokenlist;
+
+char * environmentVariables(tokenlist * tokens);
+char * tildeExpansion(tokenlist * tokens);
+char * pathSearch(tokenlist * tokens);
+void printList(tokenlist * tokens); 
 void prompt();
-void environmentVariables();
 void lexer_parse_token(); 
+
 char * get_input(void);
 tokenlist * get_tokens(char *input);
 tokenlist * new_tokenlist(void);
