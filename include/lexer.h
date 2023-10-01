@@ -11,6 +11,7 @@ typedef struct {
 char * environmentVariables(tokenlist * tokens);
 char * tildeExpansion(tokenlist * tokens);
 char * pathSearch(tokenlist * tokens);
+void ExternalCommandExec(const tokenlist * tokens, char * filePath);
 void printList(tokenlist * tokens); 
 void prompt();
 void lexer_parse_token(); 

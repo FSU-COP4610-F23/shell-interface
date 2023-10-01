@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int main()
 {
@@ -21,19 +24,16 @@ void lexer_parse_token()
 		 * tokens contains substrings from input split by spaces
 		 */
 		char *input = get_input();
-		printf("whole input: %s\n", input);
 		tokenlist *tokens = get_tokens(input);
+		char *filePath;
 
-		tokens->items[1] = environmentVariables(tokens);
+		tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
 		tokens->items[1] = tildeExpansion(tokens);
-		tokens->items[1] = pathSearch(tokens);
+		filePath = pathSearch(tokens);
+		ExternalCommandExec(tokens, filePath);
 
-		// environmentVariables(tokens);
-		// tildeExpansion(tokens);
-		printList(tokens);
+		//printList(tokens);
 
-		// free(input);
-		// free_tokens(tokens);
 		free(input);
 		free_tokens(tokens);
 	}
@@ -66,7 +66,6 @@ char * environmentVariables(tokenlist *tokens)
 	{
 		if (tokens->items[i][0] == '$')
 		{
-			// char tokenItems[100] = "";
 			char tokenItems[20] = "";
 			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
 			char * expand = malloc(sizeof(char) * strlen(getenv(tokenItems)));
@@ -142,13 +141,32 @@ char * pathSearch(tokenlist * tokens)
    }
 	if (!check)
 		printf("Command not found\n"); 
-	else
-		printf("This is correct path: %s\n", filePath);
-	
-	
-	return filePath; //I think this what u return
+	//else
+	//  printf("This is correct path: %s\n", filePath);
+
+	return filePath; //I tink this what u return
 }
 
+void ExternalCommandExec(const tokenlist * tokens, char * filePath)
+{
+	pid_t pid;
+	int status;
+	pid = fork();
+	
+	if (pid == 0) // do only if child process
+	{
+		char *argv[tokens->size + 1];
+		for (int i = 0; i < tokens->size; i++)
+		{
+			argv[i] = tokens->items[i];
+		}
+		argv[tokens->size] = NULL;
+		execv(filePath, argv);
+	}
+
+	waitpid(pid, &status, 0); //wait for child process to finish	
+
+}
 
 char *get_input(void)
 {
