@@ -112,68 +112,41 @@ char * tildeExpansion(tokenlist *tokens)
 
 char * pathSearch(tokenlist * tokens)
 {
-	// char tokenItems[50] = "";
-   //char str[80] = getenv("PATH"); 
-	/*
-	char *cmd = "ls";
-	char *argv[3];
-	argv[0] = "ls";
-	argv[1] = "-la";
-	argv[2] = NULL;
-
-	execvp(cmd, argv);
-	*/
-   
-   char * expand = malloc(sizeof(char) * strlen(getenv("PATH")));
-   strcpy(expand, getenv("PATH"));
+   char * fullPath = malloc(sizeof(char) * strlen(getenv("PATH")));
+   strcpy(fullPath, getenv("PATH"));
    const char s[2] = ":";
    char * token;
-   // temptoken up here
-   //char tempToken[100] = "";
-	char * tempToken;
+   char * filePath;
    /* get the first token */
    token = strtok(expand, s);
    bool check = false;
-   int zize = 0;
    /* walk through other tokens */
    while( token != NULL ) {
-    // printf( " %s\n", token );
 
 	if (!check) {
-		char * filePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+		char * tempFilePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
 		//save strlen(token)
-		zize = (sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
-		strcpy(filePath, token);
-		strcat(filePath, "/");
-		strcat(filePath, tokens->items[0]);
-		if (fopen(filePath, "r") != NULL)
+		strcpy(tempFilePath, token);
+		strcat(tempFilePath, "/");
+		strcat(tempFilePath, tokens->items[0]);
+		if (fopen(tempFilePath, "r") != NULL)
 		{
 			check = true;
-			//if possible make correct memory size for tempToken
-			strcpy(tempToken, token);
-
+			filePath = tempFilePath); //filePath ptr points to tempFilePath memory address
 		}
 		else {
-			free(filePath);
+			free(tempFilePath);
 		}
 	}
     token = strtok(NULL, s);
-	//   printf("This is token2: %s\n", token);
    }
-
-	char * filePath = malloc(zize);
-		strcpy(filePath, tempToken);
-		strcat(filePath, "/");
-		strcat(filePath, tokens->items[0]);
-
 	if (!check)
 		printf("Command not found\n"); 
 	else
 		printf("This is correct path: %s\n", filePath);
 	
 	
-	return tokens->items[1];
-
+	return filePath; //I think this what u return
 }
 
 
