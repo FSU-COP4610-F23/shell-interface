@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int main()
 {
@@ -26,6 +27,7 @@ void lexer_parse_token()
 
 		tokens->items[1] = environmentVariables(tokens);
 		tokens->items[1] = tildeExpansion(tokens);
+		tokens->items[1] = pathSearch(tokens);
 		// environmentVariables(tokens);
 		// tildeExpansion(tokens);
 		printList(tokens);
@@ -37,7 +39,7 @@ void lexer_parse_token()
 	}
 }
 
-void printList(tokenlist * tokens)
+void printList(tokenlist *tokens)
 {
 	// print tokens
 	for (int i = 0; i < tokens->size; i++)
@@ -49,7 +51,6 @@ void printList(tokenlist * tokens)
 	{
 		printf("%s ", tokens->items[i]);
 	}
-
 }
 
 void prompt()
@@ -57,7 +58,7 @@ void prompt()
 	printf("%s@%s:%s>", getenv("USER"), getenv("MACHINE"), getenv("PWD"));
 }
 
-char * environmentVariables(tokenlist *tokens)
+char *environmentVariables(tokenlist *tokens)
 {
 	// get environmental variable
 	for (int i = 0; i < tokens->size; i++)
@@ -67,7 +68,7 @@ char * environmentVariables(tokenlist *tokens)
 			// char tokenItems[100] = "";
 			char tokenItems[20] = "";
 			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
-			char * expand = malloc(sizeof(char) * strlen(getenv(tokenItems)));
+			char *expand = malloc(sizeof(char) * strlen(getenv(tokenItems)));
 			strcpy(expand, getenv(tokenItems));
 			// strcpy(tokens->items[i], getenv(tokenItems)); // tokens->items[i] = getenv(tokenItems)
 			// free_tokens(tokens);
@@ -78,7 +79,7 @@ char * environmentVariables(tokenlist *tokens)
 	return tokens->items[1];
 }
 
-char * tildeExpansion(tokenlist *tokens)
+char *tildeExpansion(tokenlist *tokens)
 {
 	for (int i = 0; i < tokens->size; i++)
 	{
@@ -92,12 +93,12 @@ char * tildeExpansion(tokenlist *tokens)
 			}
 			else
 			{
-				char * expand = malloc(sizeof(char) * strlen(getenv("HOME")));
+				char *expand = malloc(sizeof(char) * strlen(getenv("HOME")));
 				strcpy(expand, getenv("HOME"));
 				return expand;
 			}
 
-			char * expand2= malloc(sizeof(char) * (strlen(getenv("HOME")) + strlen(tokenItems)) + 1);
+			char *expand2 = malloc(sizeof(char) * (strlen(getenv("HOME")) + strlen(tokenItems)) + 1);
 			strcpy(expand2, getenv("HOME"));
 			strcat(expand2, tokenItems);
 			return expand2;
@@ -106,10 +107,81 @@ char * tildeExpansion(tokenlist *tokens)
 	return tokens->items[1];
 }
 
-char * pathSearch(tokenlist * tokens)
+char * pathSearch(tokenlist *tokens)
 {
-	char tokenItems[50] = "";
+	char *path = getenv("PATH");
+    const char *delimiter = ":";
+
+    // Calculate the new length of the PATH variable with "/ls" added before each delimiter
+    size_t newLength = strlen(path) + (/*strlen("/ls")*/strlen(tokens->items[0]) * (countOccurrences(path, delimiter) + 1)) + 1;
+
+    // Create a new string to hold the modified PATH variable
+    char *newPath = (char *)malloc(newLength);
+    if (newPath == NULL) {
+        perror("Memory allocation failed");
+        return 0;
+    }
+
+    // Copy the original PATH and add "/ls" before each delimiter
+    char *token = strtok(path, delimiter);
+    strcpy(newPath, token);
+
+    while ((token = strtok(NULL, delimiter)) != NULL) {
+		strcat(newPath, "/");
+        strcat(newPath, /*"/ls:"*/tokens->items[0]);
+		strcat(newPath, ":");
+        strcat(newPath, token);
+    }
+
+	free(token);
+    // Print the modified PATH variable
+    // printf("Modified PATH: %s\n", newPath);
+
+	// printf("token item 1: %s\n", tokens->items[0]);
+	char * expand = malloc(sizeof(char) * strlen(newPath));
+	strcpy(expand, newPath);
+	const char s[2] = ":";
+
+	strcat(expand, "/");
+	strcat(expand, tokens->items[0]);
+	// char * expand2 = malloc(sizeof(char) * strlen(newPath));
+
+	char * token2 = strtok(expand, s);
+	// strcpy(expand2, token);
+
+	// int test = 1;
+	while (token2 != NULL)
+	{	
+		printf("goes in here");
+		int fp = access(token, F_OK);
+		if(fp == -1)
+		{ 
+
+			printf("%s :executable not here \n", token2);
+		}
+		else
+		{
+			printf("%s :executable located here \n", token2);
+		}
+
+		token2 = strtok(NULL, s);
+	}
+		
+	free(token2);   
+	
+	return tokens->items[1];
 }
+
+size_t countOccurrences(const char *str, const char *target) {
+    size_t count = 0;
+    const char *pos = str;
+    while ((pos = strstr(pos, target)) != NULL) {
+        count++;
+        pos += strlen(target);
+    }
+    return count;
+}
+
 char *get_input(void)
 {
 	char *buffer = NULL;
@@ -178,7 +250,6 @@ void free_tokens(tokenlist *tokens)
 	free(tokens);
 }
 
-
 // void lexer_parse_token()
 // {
 // 	while (1)
@@ -206,8 +277,6 @@ void free_tokens(tokenlist *tokens)
 // 		free_tokens(tokens);
 // 	}
 // }
-
-
 
 // void environmentVariables(tokenlist * tokens)
 // {
