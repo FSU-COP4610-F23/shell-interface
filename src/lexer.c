@@ -176,6 +176,11 @@ char * pathSearch(tokenlist * tokens)
 
 }
 
+void ioRedirection(int file)
+{
+
+}
+
 
 char *get_input(void)
 {
