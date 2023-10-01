@@ -118,7 +118,7 @@ char * pathSearch(tokenlist * tokens)
    char * token;
    char * filePath;
    /* get the first token */
-   token = strtok(expand, s);
+   token = strtok(fullPath, s);
    bool check = false;
    /* walk through other tokens */
    while( token != NULL ) {
@@ -132,7 +132,7 @@ char * pathSearch(tokenlist * tokens)
 		if (fopen(tempFilePath, "r") != NULL)
 		{
 			check = true;
-			filePath = tempFilePath); //filePath ptr points to tempFilePath memory address
+			filePath = tempFilePath; //filePath ptr points to tempFilePath memory address
 		}
 		else {
 			free(tempFilePath);
