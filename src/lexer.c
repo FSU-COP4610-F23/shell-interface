@@ -24,7 +24,7 @@ void lexer_parse_token()
 		 * tokens contains substrings from input split by spaces
 		 */
 		char *input = get_input();
-		tokenlist *tokens = get_tokens(input);
+		tokenlist * tokens = get_tokens(input);
 		char *filePath;
 
 		tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
@@ -32,7 +32,7 @@ void lexer_parse_token()
 		filePath = pathSearch(tokens);
 		ExternalCommandExec(tokens, filePath);
 
-		//printList(tokens);
+		// printList(tokens);
 
 		free(input);
 		free_tokens(tokens);
@@ -127,7 +127,7 @@ char * pathSearch(tokenlist * tokens)
 		//save strlen(token)
 		strcpy(tempFilePath, token);
 		strcat(tempFilePath, "/");
-		strcat(tempFilePath, tokens->items[0]);
+		strcat(tempFilePath, tokens->items[0]); //incecrement ls into first token
 		if (fopen(tempFilePath, "r") != NULL)
 		{
 			check = true;
@@ -144,7 +144,7 @@ char * pathSearch(tokenlist * tokens)
 	//else
 	//  printf("This is correct path: %s\n", filePath);
 
-	return filePath; //I tink this what u return
+	return filePath; //I tHink this what u return
 }
 
 void ExternalCommandExec(const tokenlist * tokens, char * filePath)
@@ -236,84 +236,3 @@ void free_tokens(tokenlist *tokens)
 	free(tokens);
 }
 
-
-// void lexer_parse_token()
-// {
-// 	while (1)
-// 	{
-// 		// print out prompt
-// 		printf("\n");
-// 		prompt();
-
-// 		/* input contains the whole command
-// 		 * tokens contains substrings from input split by spaces
-// 		 */
-// 		char *input = get_input();
-// 		printf("whole input: %s\n", input);
-
-// 		tokenlist *tokens = get_tokens(input);
-
-// 		for (int i = 0; i < tokens->size; i++) {
-// 			printf("token %d: (%s)\n", i, tokens->items[i]);
-// 		}
-
-// 		environmentVariables(tokens);
-// 		tildeExpansion(tokens);
-
-// 		free(input);
-// 		free_tokens(tokens);
-// 	}
-// }
-
-
-
-// void environmentVariables(tokenlist * tokens)
-// {
-// 	for (int i = 0; i < tokens->size; i++)
-// 	{
-// 		// printf("this should give me echo: %s\n", tokens->items[i]);
-// 		// printf("%c",tokens->items[i][0]);
-// 		// int charCount = 0;
-// 		if (tokens->items[i][0] == '$')
-// 		{
-// 			// printf("%s", tokens->items[i--]);
-// 			char tokenItems[100] = "";
-// 			strcat(tokenItems, &tokens->items[i][1]);
-
-// 			printf("%s", getenv(tokenItems));
-// 		}
-// 		else if (tokens->items[i][0] != '~' && tokens->items[i][0] != '$')
-// 		{
-// 			printf("%s ", tokens->items[i]);
-// 		}
-// 	}
-// }
-
-// void tildeExpansion(tokenlist * tokens)
-// {
-// 	for (int i = 0; i < tokens->size; i++)
-// 	{
-// 		if (tokens->items[i][0] == '~')
-// 		{
-// 			bool check = false;
-// 			char tokenItems[100] = "";
-// 			if (tokens->items[i][1] == '/')
-// 			{
-// 				check = true;
-// 				// printf("this is &token->items:%s\n", &tokens->items[i][1]);
-// 				strcat(tokenItems, &tokens->items[i][1]);
-// 				// printf("#3 starts here: %s", tokenItems);
-// 			}
-
-// 			printf("%s", getenv("HOME"));
-// 			// strcpy(tokens->items[i], getenv("HOME"));
-
-// 			if (check)
-// 			{
-// 				// strcat(tokens->items[i], tokenItems);
-// 				printf("%s", tokenItems);
-// 				// printf("%s", tokens->items[i]);
-// 			}
-// 		}
-// 	}
-// }
