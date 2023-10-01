@@ -26,6 +26,8 @@ void lexer_parse_token()
 
 		tokens->items[1] = environmentVariables(tokens);
 		tokens->items[1] = tildeExpansion(tokens);
+		tokens->items[1] = pathSearch(tokens);
+
 		// environmentVariables(tokens);
 		// tildeExpansion(tokens);
 		printList(tokens);
@@ -106,10 +108,75 @@ char * tildeExpansion(tokenlist *tokens)
 	return tokens->items[1];
 }
 
+// https://www.tutorialspoint.com/c_standard_library/c_function_strtok.htm
+
 char * pathSearch(tokenlist * tokens)
 {
-	char tokenItems[50] = "";
+	// char tokenItems[50] = "";
+   //char str[80] = getenv("PATH"); 
+	/*
+	char *cmd = "ls";
+	char *argv[3];
+	argv[0] = "ls";
+	argv[1] = "-la";
+	argv[2] = NULL;
+
+	execvp(cmd, argv);
+	*/
+   
+   char * expand = malloc(sizeof(char) * strlen(getenv("PATH")));
+   strcpy(expand, getenv("PATH"));
+   const char s[2] = ":";
+   char * token;
+   // temptoken up here
+   //char tempToken[100] = "";
+	char * tempToken;
+   /* get the first token */
+   token = strtok(expand, s);
+   bool check = false;
+   int zize = 0;
+   /* walk through other tokens */
+   while( token != NULL ) {
+    // printf( " %s\n", token );
+
+	if (!check) {
+		char * filePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+		//save strlen(token)
+		zize = (sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+		strcpy(filePath, token);
+		strcat(filePath, "/");
+		strcat(filePath, tokens->items[0]);
+		if (fopen(filePath, "r") != NULL)
+		{
+			check = true;
+			//if possible make correct memory size for tempToken
+			strcpy(tempToken, token);
+
+		}
+		else {
+			free(filePath);
+		}
+	}
+    token = strtok(NULL, s);
+	//   printf("This is token2: %s\n", token);
+   }
+
+	char * filePath = malloc(zize);
+		strcpy(filePath, tempToken);
+		strcat(filePath, "/");
+		strcat(filePath, tokens->items[0]);
+
+	if (!check)
+		printf("Command not found\n"); 
+	else
+		printf("This is correct path: %s\n", filePath);
+	
+	
+	return tokens->items[1];
+
 }
+
+
 char *get_input(void)
 {
 	char *buffer = NULL;
