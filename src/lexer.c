@@ -17,26 +17,46 @@ void lexer_parse_token()
 {
 	while (1)
 	{
+		
 		// print out prompt
 		printf("\n");
 		prompt();
 		/* input contains the whole command
 		 * tokens contains substrings from input split by spaces
 		 */
-		char *input = get_input();
+		char * input = get_input();
 		tokenlist * tokens = get_tokens(input);
-		char *filePath;
 
-		tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
-		tokens->items[1] = tildeExpansion(tokens);
-		filePath = pathSearch(tokens);
-		ExternalCommandExec(tokens, filePath);
+		if (tokens->size > 0) 
+		{
+			// Check if the input contains a pipe character
+			int has_pipe = 0;
+			for (size_t i = 0; i < tokens->size; i++) {
+				if (strcmp(tokens->items[i], "|") == 0) {
+					has_pipe = 1;
+					break;
+				}
+			}
+			if (has_pipe) {
+				// Execute piped commands
+				piping(tokens);
+			}
+			else 
+			{
+				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
+				tokens->items[1] = tildeExpansion(tokens);
+				tokens->items[0] = pathSearch(tokens);
+				ExternalCommandExec(tokens, tokens->items[0]);			
+			}
 
-		// printList(tokens);
+		}
+
+		printList(tokens);
 
 		free(input);
 		free_tokens(tokens);
 	}
+
 }
 
 void printList(tokenlist * tokens)
@@ -127,7 +147,7 @@ char * pathSearch(tokenlist * tokens)
 		//save strlen(token)
 		strcpy(tempFilePath, token);
 		strcat(tempFilePath, "/");
-		strcat(tempFilePath, tokens->items[0]); //incecrement ls into first token
+		strcat(tempFilePath, tokens->items [0]); //incecrement ls into first token
 		if (fopen(tempFilePath, "r") != NULL)
 		{
 			check = true;
@@ -147,7 +167,7 @@ char * pathSearch(tokenlist * tokens)
 	return filePath; //I tHink this what u return
 }
 
-void ExternalCommandExec(const tokenlist * tokens, char * filePath)
+char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 {
 	pid_t pid;
 	int status;
@@ -166,7 +186,141 @@ void ExternalCommandExec(const tokenlist * tokens, char * filePath)
 
 	waitpid(pid, &status, 0); //wait for child process to finish	
 
+	return 0;
 }
+
+
+
+char * piping(tokenlist *tokens) 
+{
+    size_t num_tokens = tokens->size;
+
+    // Find the positions of the pipe tokens ("|")
+    size_t pipe_positions[2] = {0};
+    int pipe_count = 0; // Use this becasue there could be one or two pipes
+    for (size_t i = 0; i < num_tokens; i++) 
+	{
+        if (strcmp(tokens->items[i], "|") == 0) 
+		{
+            pipe_positions[pipe_count] = i;
+            pipe_count++;
+        }
+    }
+	// pipe has to be more than one. Pipe cannot be located as the first character, and cannot be last character
+    if (pipe_count < 1 || pipe_positions[0] == 0 || pipe_positions[pipe_count - 1] == num_tokens - 1) 
+	{
+        fprintf(stderr, "Invalid input: Missing command(s)\n");
+		return 0; 
+    }
+
+    // Create an array of tokenlists for commands (There can be two and three commands)
+    tokenlist * commands[3] = {NULL};
+    for (int i = 0; i <= pipe_count; i++)  // based on the number of new tokens
+	{
+        commands[i] = new_tokenlist();
+    }
+
+    // Populate the tokenlists for commands
+    size_t start = 0; // 
+    for (int i = 0; i <= pipe_count; i++) 
+	{
+        size_t end = (i == pipe_count) ? num_tokens : pipe_positions[i];
+        for (size_t j = start; j < end; j++) 
+		{
+            add_token(commands[i], tokens->items[j]);
+        }
+        start = end + 1;
+    }
+
+	// pipr file decriptors initalization. 
+    int pipefds[2][2]; 
+    pid_t pids[3]; 
+
+    // Create pipes
+    for (int i = 0; i < pipe_count; i++) 
+	{
+        if (pipe(pipefds[i]) == -1) 
+		{
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (int i = 0; i <= pipe_count; i++) 
+	{
+        pids[i] = fork();
+        if (pids[i] == -1) 
+		{
+            perror("fork");
+            exit(EXIT_FAILURE);
+     	}
+
+        if (pids[i] == 0) 
+		{
+            // Child process
+            if (i > 0) 
+			{
+                // Redirect standard input from the previous pipe
+                dup2(pipefds[i - 1][0], STDIN_FILENO);
+                close(pipefds[i - 1][0]);
+            }
+
+            if (i < pipe_count) 
+			{
+                // Redirect standard output to the current pipe
+                dup2(pipefds[i][1], STDOUT_FILENO);
+                close(pipefds[i][0]);
+            }
+
+            // Close all pipe file descriptors
+            for (int j = 0; j < pipe_count; j++) 
+			{
+                close(pipefds[j][0]);
+                close(pipefds[j][1]);
+            }
+
+            // Execute the command
+            char * cmd_path = pathSearch(commands[i]);
+            if (cmd_path) 
+			{
+                ExternalCommandExec(commands[i], cmd_path);
+                free(cmd_path);
+            } 
+			else 
+			{
+                fprintf(stderr, "Command not found: %s\n", commands[i]->items[0]);
+                exit(EXIT_FAILURE);
+            }
+
+            // Child process should exit after executing the command
+            exit(EXIT_SUCCESS);
+        }
+    }
+	
+    // Parent process
+    // Close all pipe file descriptors
+    for (int j = 0; j < pipe_count; j++) 
+	{
+        close(pipefds[j][0]);
+        close(pipefds[j][1]);
+    }
+
+    // Wait for all child processes to complete
+    for (int i = 0; i <= pipe_count; i++) 
+	{
+        waitpid(pids[i], NULL, 0);
+    }
+
+    // Free tokenlists
+    for (int i = 0; i <= pipe_count; i++) 
+	{
+        free_tokens(commands[i]);
+    }
+
+	return 0; 
+}
+
+
 
 char *get_input(void)
 {
@@ -236,3 +390,251 @@ void free_tokens(tokenlist *tokens)
 	free(tokens);
 }
 
+
+
+
+
+
+
+
+
+
+
+/*
+void piping()
+{
+	// Do the pipe
+	int fd[2]; 
+	if (pipe(fd) == -1)
+	{
+		return 1;
+	}
+
+	int pid1 = fork(); 
+	if (pid1 < 0) 
+	{
+		return 2; 
+	}
+
+	if (pid1 ==0) 
+	{
+		dup2(fd[1], STDOUT_FILENO);
+		close(fd[0]);
+		close(fd[1]);
+		execlp("ping", "ping", "-c", "5", "google.com", NULL);
+	}
+
+	int pid2 = fork(); 
+	if (pid2 < 0)
+	{
+		return 3; 
+	}
+
+	if (pid2 == 0)
+	{
+		dup2(fd[0], STDIN_FILENO);
+		close(fd[0]);
+		close(fd[1]);
+		execlp("grep", "grep", "rtt", NULL);
+	}
+
+	close(fd[0]);
+	close(fd[1]);
+
+	waitpid(pid1, NULL, 0); 
+	waitpid(pid2, NULL, 0); 
+}
+*/
+
+/*
+void piping()
+{
+    // Do the pipe
+    int fd[2];
+    if (pipe(fd) == -1)
+    {
+        perror("pipe");
+        exit(1);
+    }
+
+    int pid1 = fork();
+    if (pid1 < 0)
+    {
+        perror("fork");
+        exit(2);
+    }
+
+    if (pid1 == 0)
+    {
+        dup2(fd[1], STDOUT_FILENO);
+        close(fd[0]);
+        close(fd[1]);
+        
+        char *ping_args[] = {"ping", "-c", "5", "google.com", NULL};
+        execv("/bin/ping", ping_args); // Use the full path to ping
+
+        perror("execv");
+        exit(1);
+    }
+
+    int pid2 = fork();
+    if (pid2 < 0)
+    {
+        perror("fork");
+        exit(3);
+    }
+
+    if (pid2 == 0)
+    {
+        dup2(fd[0], STDIN_FILENO);
+        close(fd[0]);
+        close(fd[1]);
+        
+        char *grep_args[] = {"grep", "rtt", NULL};
+        execv("/bin/grep", grep_args); // Use the full path to grep
+
+        perror("execv");
+        exit(1);
+    }
+
+    close(fd[0]);
+    close(fd[1]);
+
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+}
+*/
+
+// // void piping(tokenlist * tokens)
+// void piping(tokenlist * tokens)
+// {
+// 	/*Want to split it so this function  knows the first and second command*/
+// 	int locOfPipe;
+// 	char * cmd1;
+// 	char * cmd2; 
+// 	for (int i = 0; i < tokens->size; i++) //gets the location of |
+// 	{
+// 		if (* tokens->items[i] == '|')
+// 		{
+// 			locOfPipe = i;
+// 		}
+// 	}
+
+// 	char * argv[locOfPipe];
+// 	// char *argv[tokens->size + 1];
+// 	for (int i = 0; i < locOfPipe; i++) //creating the array for the first command
+// 	{
+// 		argv[i] = tokens->items[i];
+// 	}
+// 	argv[locOfPipe] = NULL;
+// 	char *argv1[tokens->size + 1];
+	
+// 	for (int i = locOfPipe+1; i < tokens->size; i++) // creating the array for second command
+// 	{
+// 		argv1[i] = tokens->items[i];
+// 	}
+// 	argv1[tokens->size] = NULL;
+
+// 	// gives the first and second command
+// 	cmd1 = tokens->items[0];
+// 	cmd2 = tokens->items[locOfPipe+1];
+	
+// 	printf("Printing the information out\n");
+// 	for (int i = 0; i<locOfPipe; i++)
+// 	{
+// 		printf("%s, ", argv[i]);
+// 	}
+// 	printf("\n");
+// 	for (int i = locOfPipe+1; i<tokens->size; i++)
+// 	{
+// 		printf("%s, ", argv1[i]);
+// 	}
+// 	printf("\n");
+
+//     // Do the pipe
+//     int fd[2];
+//     if (pipe(fd) == -1)
+//     {
+//         perror("pipe");
+//         exit(1);
+//     }
+
+//     int pid1 = fork();
+//     if (pid1 < 0)
+//     {
+//         perror("fork");
+//         exit(2);
+//     }
+
+// 	// ls -al | grep '^d'
+//     if (pid1 == 0)
+//     {
+//         dup2(fd[1], STDOUT_FILENO);
+//         close(fd[0]);
+//         close(fd[1]);
+        
+//         execv("/bin/ls", argv); // Use the full path to ping
+
+// 		// char *ping_args[] = {"ls", "-al", NULL};
+//         // execv("/bin/ls", ping_args); // Use the full path to ping
+		
+//         // char *ping_args[] = {"ping", "-c", "5", "google.com", NULL};
+//         // execv("/bin/ping", ping_args); // Use the full path to ping
+
+//         perror("execv");
+//         exit(1);
+//     }
+
+//     int pid2 = fork();
+//     if (pid2 < 0)
+//     {
+//         perror("fork");
+//         exit(3);
+//     }
+
+//     if (pid2 == 0)
+//     {
+//         dup2(fd[0], STDIN_FILENO);
+//         close(fd[0]);
+//         close(fd[1]);
+        
+
+//         execv("/bin/grep", argv1); // Use the full path to grep
+// 		// char *grep_args[] = {"grep", "^d", NULL};
+//         // execv("/bin/grep", grep_args); // Use the full path to grep
+//         // char *grep_args[] = {"grep", "rtt", NULL};
+//         // execv("/bin/grep", grep_args); // Use the full path to grep
+
+//         perror("execv");
+//         exit(1);
+//     }
+
+//     close(fd[0]);
+//     close(fd[1]);
+
+//     waitpid(pid1, NULL, 0);
+//     waitpid(pid2, NULL, 0);
+
+// }
+
+
+
+
+// int main() {
+//     while (1) {
+//         printf("Enter piped commands (e.g., cmd1 | cmd2): ");
+//         char *input = get_input();
+
+//         // Create a tokenlist from the input
+//         tokenlist *tokens = get_tokens(input);
+
+//         if (tokens->size > 0) {
+//             execute_piped_commands(tokens);
+//         }
+
+//         free(input);
+//         free_tokens(tokens);
+//     }
+
+//     return 0;
+// }
