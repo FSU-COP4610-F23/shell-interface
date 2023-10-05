@@ -176,9 +176,71 @@ char * pathSearch(tokenlist * tokens)
 
 }
 
-void ioRedirection(int file)
+void ioRedirection(tokenlist *tokens)
 {
+	
+	size_t num_tokens = tokens->size;
+	size_t redirector_positions[2] = {0};
+	// int redirector_count = 0; 		// can be 1 or 2 </> - Though maybe shouldnt use
+	int redirectorIn_count = 0;		// for <
+	int redirectorOut_count = 0;	// for >
 
+	for(size_t i = 0; i< num_tokens; i++)
+	{
+		if(strcmp(tokens->items[i], "<") == 0)
+		{
+			redirector_positions[redirectorIn_count] = i;
+			redirectorIn_count++;
+		}
+		else if(strcmp(tokens->items[i], ">") == 0)
+		{
+			redirector_positions[redirectorOut_count] = i;
+			redirectorOut_count++;
+		}
+	}
+
+
+	char * cmd_path = pathSearch(commands[i]); 
+	/*
+
+		FILE *file_in;
+		FILE *file_out;
+
+		scuffed pseudocode yeehaw <3
+		think i might yoink the tildeexpansion idea but needs change
+		cause < & > isnt in spots 0 & 1 like ~/
+
+		if (... == '>')			// for >
+		{
+			// writes its standoutput to file_out
+			// if file does not exit, create it
+
+			if(!fopen())
+			{
+				fopen("  ", "w")
+			}
+			// if file already exists, overwrite it
+				// FILE NEEDS RW---- PERMISSION. 
+
+			if(..... == '<')	// for > <
+			{
+				// same as the other (< >)
+
+			}
+		}
+		else if (.... == '<')	// for <
+		{
+			// cmd receives its stand input from file_in
+			// an error will be signaled if file does not exist or is not a regular file
+
+
+			if(... == '>')		// for < >
+			{
+				// cmd receives standard input from file_in
+				// cmd writes standard output to file_out
+			}
+		}
+	*/
 }
 
 

@@ -13,6 +13,7 @@ char * tildeExpansion(tokenlist * tokens);
 char * pathSearch(tokenlist * tokens);
 void printList(tokenlist * tokens); 
 void prompt();
+void ioRedirection(tokenlist *tokens);
 void lexer_parse_token(); 
 
 char * get_input(void);
