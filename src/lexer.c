@@ -140,11 +140,12 @@ char * pathSearch(tokenlist * tokens)
     token = strtok(NULL, s);
    }
 	if (!check)
-		printf("Command not found\n"); 
-	//else
-	//  printf("This is correct path: %s\n", filePath);
-
-	return filePath; //I tHink this what u return
+	{
+		printf("Command not found\n");
+		return 0; 
+	}
+	else
+		return filePath; 
 }
 
 void ExternalCommandExec(const tokenlist * tokens, char * filePath)
