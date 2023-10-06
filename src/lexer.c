@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 int main()
 {
@@ -172,178 +173,78 @@ void ExternalCommandExec(const tokenlist * tokens, char * filePath)
 
 void ioRedirection(tokenlist *tokens)
 {
-	
-	size_t num_tokens = tokens->size;
-	size_t redirector_positions[2] = {0};
-	int redirectorIn_count = 0;		// for <
-	int redirectorOut_count = 0;	// for >
-	int redirector_count = 0;
+    size_t num_tokens = tokens->size;
+    int in_file = -1;   // File descriptor for input file
+    int out_file = -1;  // File descriptor for output file
+    bool input_redirect = false;
+    bool output_redirect = false;
 
-	for(size_t i = 0; i< num_tokens; i++)
-	{
-		if(strcmp(tokens->items[i], ">") == 0)
-		{
-			redirector_positions[redirector_count] = i;
-			redirector_count++;
-			redirectorOut_count++;
+    // Process tokens to identify input and output redirection
+    for (size_t i = 0; i < num_tokens; i++)
+    {
+        if (strcmp(tokens->items[i], "<") == 0)
+        {
+            if (i + 1 < num_tokens)
+            {
+                // Open the input file for reading
+                in_file = open(tokens->items[i + 1], O_RDONLY);
+                if (in_file == -1)
+                {
+                    perror("open");
+                    exit(EXIT_FAILURE);
+                }
+                input_redirect = true;
+                i++;  // Skip the filename
+            }
+            else
+            {
+                fprintf(stderr, "Error: Missing input file name after '<'\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strcmp(tokens->items[i], ">") == 0)
+        {
+            if (i + 1 < num_tokens)
+            {
+                // Open the output file for writing (overwrite if it exists)
+                out_file = open(tokens->items[i + 1], O_WRONLY | O_CREAT | O_TRUNC, 0600);
+                if (out_file == -1)
+                {
+                    perror("open");
+                    exit(EXIT_FAILURE);
+                }
+                output_redirect = true;
+                i++;  // Skip the filename
+            }
+            else
+            {
+                fprintf(stderr, "Error: Missing output file name after '>'\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
 
-			/*
-			redirector_positions[redirectorIn_count] = i;
-			redirectorIn_count++;
-			*/
-		}
-		/*
-		else if(strcmp(tokens->items[i], ">") == 0)
-		{
-			redirector_positions[redirectorOut_count] = i;
-			redirectorOut_count++;
-		}
-		*/
-	}
+    // Redirect input and output if necessary
+    if (input_redirect)
+    {
+        if (dup2(in_file, STDIN_FILENO) == -1)
+        {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+        close(in_file); // Close the original file descriptor
+    }
 
-	// Line 217 - Creating an array of tokenlists for commands 
-
-	// QUICK TEST 1:05 PM
-
-	
-	tokenlist *command[1] = {NULL};
-	for(int i=0; i <= redirector_count; i++)	// took out redirector_positons[1]
-	{
-		command[i] = new_tokenlist();
-	}
-
-	// Populate the tokenlist for commands
-
-	size_t start = 0;
-	for(int i = 0; i <= redirector_count; i++)
-	{
-		size_t end;
-			if(i == redirector_count)
-			{
-				end = num_tokens;
-			}
-			else
-			{
-				end = redirector_positions[i];
-			}
-		for(size_t j = start; j < end; j++)
-			{
-				add_token(command[i], tokens->items[j]);
-			}
-		start = end + 1;
-	}
-
-
-	// Jasmine Pipe stuff 
-	
-
-	// pipe file descriptors initialization
-	//int pipefds[2][2];
-	pid_t pids[3];
-
-	// Create pipes
-	/*
-	for (int i = 0; i < redirector_count; i++)
-	{
-		if(pipe(pipefds[i]) == -1)
-		{
-			perror("pipe");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	*/
-	
-	// Le Fork
-	for(int i = 0; i <= redirector_count; i++)
-	{
-		pids[i] = fork();
-		if (pids[i] == -1)
-		{
-			perror("fork");
-			exit(EXIT_FAILURE);
-		}
-		
-
-	if(pids[i] == 0)
-	{
-		// if child process
-		if(i > 0)
-		{
-
-			if(redirectorOut_count == 1 && redirectorIn_count == 0) 
-			{
-			int outfd = dup(STDOUT_FILENO);
-			close(STDOUT_FILENO);
-			outfd = open("output.txt", O_RDWR | O_CREAT);
-			dup2(outfd,STDIN_FILENO);
-			close(outfd);
-			printf("Redirected output to test,txt\n");		// test line
-			}
-			
-		}
-
-		char * cmd_path = pathSearch(command[i]); 
-		if(cmd_path)
-		{
-		ExternalCommandExec(command[i], cmd_path);
-		free(cmd_path);
-		}
-		else
-		{
-		fprintf(stderr, "Command not found: %s\n", command[i]->items[0]);
-		exit(EXIT_FAILURE);
-		}
-		exit(EXIT_SUCCESS);
-
-	}
-	}
-	
-	for(int i = 0; i <= redirector_count; i++)
-	{
-		waitpid(pids[i], NULL, 0);
-	}
-
-	for(int i = 0; i <= redirector_count; i++)
-	{
-		free_tokens(command[i]);
-	}
+    if (output_redirect)
+    {
+        if (dup2(out_file, STDOUT_FILENO) == -1)
+        {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+        close(out_file); // Close the original file descriptor
+    }
 }
-
-	// < and > stuff from the other day
-
-	 /*for(int i = 0; i <= redirector_count; i++)
-	{
-		if(redirectorOut_count == 1 && redirectorIn_count == 0)							// not sure if this overwrites
-		{
-			int outfd = dup(STDOUT_FILENO);
-			close(STDOUT_FILENO);
-			int fd = open("text.txt", O_RDWR | O_CREAT);
-			dup2(outfd,STDIN_FILENO);
-			close(outfd);
-
-			printf("Redirected output to test,txt\n");		// test line
-		}
-		else if(redirectorIn_count = 1 && redirectorOut_count == 0)
-		{
-			char str[50];
-			int infd = dup(STDIN_FILENO);
-			close(STDIN_FILENO);
-			fgets(str, 60, stdin);			// maybe slap in stdin_fileno here??
-			if(!open())
-			{
-				printf("File does not exist or is not a regular file\n");
-			}
-			dup2(infd, STDIN_FILENO);
-			printf("Redirected input %s", str);
-
-		}
-	}
-
-	*/
-
-	
-
 
 
 char *get_input(void)
