@@ -6,8 +6,18 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define MAX_HISTORY_SIZE 3
+
+struct commandHistory {
+    char commands[MAX_HISTORY_SIZE][200]; // Assuming commands are less than 200 characters
+    int count;
+};
+
+struct commandHistory history;
+
 int main()
 {
+	history.count = 0;
 	lexer_parse_token();
 
 	return 0;
@@ -17,7 +27,6 @@ void lexer_parse_token()
 {
 	while (1)
 	{
-		
 		// print out prompt
 		printf("\n");
 		prompt();
@@ -27,36 +36,84 @@ void lexer_parse_token()
 		char * input = get_input();
 		tokenlist * tokens = get_tokens(input);
 
-		if (tokens->size > 0) 
-		{
-			// Check if the input contains a pipe character
-			int has_pipe = 0;
-			for (size_t i = 0; i < tokens->size; i++) {
-				if (strcmp(tokens->items[i], "|") == 0) {
-					has_pipe = 1;
-					break;
-				}
-			}
-			if (has_pipe) {
-				// Execute piped commands
-				piping(tokens);
-			}
-			else 
-			{
-				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
-				tokens->items[1] = tildeExpansion(tokens);
-				tokens->items[0] = pathSearch(tokens);
-				ExternalCommandExec(tokens, tokens->items[0]);			
-			}
-
-		}
-
-		printList(tokens);
-
+		executeAllCommands(tokens, input);
 		free(input);
 		free_tokens(tokens);
 	}
 
+}
+
+void executeAllCommands(tokenlist * tokens, char * input)
+{
+	// while(1)
+	// {
+		if (tokens->size > 0) 
+		{
+			historyCommandList(tokens, input);
+			if (hasPipe(tokens)) 
+			{
+				piping(tokens);
+			}
+			else 
+			{
+				if (strcmp(tokens->items[0],"exit") == 0 || strcmp(tokens->items[0],"cd") == 0)
+				{
+					// running inernal command execution
+					internalCommandExecution(tokens);			
+				}
+				else
+				{
+					tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
+					tokens->items[1] = tildeExpansion(tokens);
+					tokens->items[0] = pathSearch(tokens);
+					ExternalCommandExec(tokens, tokens->items[0]);
+				}
+			}
+		}
+		// print tokens
+		printList(tokens);
+	// }
+}
+
+void historyCommandList(tokenlist * tokens, char * input )
+{
+	// Exclude the "exit" command from being added to history
+	if (strcmp(tokens->items[0], "exit") != 0) 
+	{
+		// Add the command to the history
+		if (history.count < MAX_HISTORY_SIZE) 
+		{
+			strcpy(history.commands[history.count], input);
+			history.count++;
+		} 
+		else 
+		{
+			// Shift existing commands to make space for the new one
+			for (int i = 0; i < MAX_HISTORY_SIZE - 1; i++) 
+			{
+				strcpy(history.commands[i], history.commands[i + 1]);
+			}
+			strcpy(history.commands[MAX_HISTORY_SIZE - 1], input);
+		}
+	}
+}
+
+bool hasPipe(tokenlist * tokens)
+{
+	// Check if the input contains a pipe character
+	// int has_pipe = 0;
+	bool hasPipe = false;
+	for (size_t i = 0; i < tokens->size; i++) 
+	{
+		if (strcmp(tokens->items[i], "|") == 0) 
+		{
+			// has_pipe = 1;
+			hasPipe = true;
+			return hasPipe;
+			break;
+		}
+	}
+	return false; 
 }
 
 void printList(tokenlist * tokens)
@@ -140,31 +197,35 @@ char * pathSearch(tokenlist * tokens)
    token = strtok(fullPath, s);
    bool check = false;
    /* walk through other tokens */
-   while( token != NULL ) {
+   while( token != NULL ) 
+   {
 
-	if (!check) {
-		char * tempFilePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
-		//save strlen(token)
-		strcpy(tempFilePath, token);
-		strcat(tempFilePath, "/");
-		strcat(tempFilePath, tokens->items [0]); //incecrement ls into first token
-		if (fopen(tempFilePath, "r") != NULL)
+		if (!check) 
 		{
-			check = true;
-			filePath = tempFilePath; //filePath ptr points to tempFilePath memory address
+			char * tempFilePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+			//save strlen(token)
+			strcpy(tempFilePath, token);
+			strcat(tempFilePath, "/");
+			strcat(tempFilePath, tokens->items [0]); //incecrement ls into first token
+			if (fopen(tempFilePath, "r") != NULL)
+			{
+				check = true;
+				filePath = tempFilePath; //filePath ptr points to tempFilePath memory address
+			}
+			else {
+				free(tempFilePath);
+			}
 		}
-		else {
-			free(tempFilePath);
-		}
-	}
-    token = strtok(NULL, s);
+		token = strtok(NULL, s);
    }
-	if (!check)
-		printf("Command not found\n"); 
-	//else
-	//  printf("This is correct path: %s\n", filePath);
 
-	return filePath; //I tHink this what u return
+	if (!check)
+	{
+		printf("Command not found\n");
+		return 0; 
+	}
+	else
+		return filePath; 
 }
 
 char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
@@ -326,7 +387,65 @@ char * piping(tokenlist *tokens)
 	return 0; 
 }
 
+char * internalCommandExecution(tokenlist * tokens)
+{
+	if (strcmp(tokens->items[0], "exit") == 0)
+	{
+		// creare a fuunction that lists active backgroun processes
+		// Display the last three valid commands
+        
+		int start; 
+		if (history.count > 3)
+		{
+			start = history.count - 3; // if we pass three commands then start from 1 again
+		}
+		else if(history.count < 3 && history.count > 0)
+		{
+			printf("Last valid commands:\n");
+			start = history.count - 1;
+		}
+		else if(history.count == 3)
+		{
+			printf("Last three valid commands:\n");
+			start = 0;  //start is 0
+		}
+		else
+		{
+			printf("There are no valid commands\n");
+		}
+        for (int i = start; i < history.count; i++) 
+		{
+            printf("%s\n", history.commands[i]); 
+        }
 
+		exit(0);
+		printf("User wants to exit");
+	}
+	else if(strcmp(tokens->items[0], "cd") == 0)
+	{
+		// if there are no arguments supplied
+		if (tokens->size == 1 )
+		{	
+			tokens->items[1] = getenv("HOME");
+			add_token(tokens, tokens->items[1]);
+			chdir(tokens->items[1]);
+		}
+		else if (tokens->size > 2) //if there are more than one argumenr
+		{
+			printf("Error: More than one argument is present\n");
+		}
+		else if (access(tokens->items[1], F_OK)==-1)
+		{
+			printf("Error: target does not exist\n");
+		}
+		chdir(tokens->items[1]);
+	}
+	else if (strcmp(tokens->item[0], "jobs") == 0)
+	{
+		
+	}
+	return tokens->items[1]; 
+}
 
 char *get_input(void)
 {
