@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 int main()
 {
@@ -112,136 +116,241 @@ char * tildeExpansion(tokenlist *tokens)
 
 char * pathSearch(tokenlist * tokens)
 {
-	// char tokenItems[50] = "";
-   //char str[80] = getenv("PATH"); 
-	/*
-	char *cmd = "ls";
-	char *argv[3];
-	argv[0] = "ls";
-	argv[1] = "-la";
-	argv[2] = NULL;
-
-	execvp(cmd, argv);
-	*/
-   
-   char * expand = malloc(sizeof(char) * strlen(getenv("PATH")));
-   strcpy(expand, getenv("PATH"));
+	char * fullPath = malloc(sizeof(char) * strlen(getenv("PATH")));
+   strcpy(fullPath, getenv("PATH"));
    const char s[2] = ":";
    char * token;
-   // temptoken up here
-   //char tempToken[100] = "";
-	char * tempToken;
+   char * filePath;
    /* get the first token */
-   token = strtok(expand, s);
+   token = strtok(fullPath, s);
    bool check = false;
-   int zize = 0;
    /* walk through other tokens */
    while( token != NULL ) {
-    // printf( " %s\n", token );
 
 	if (!check) {
-		char * filePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+		char * tempFilePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
 		//save strlen(token)
-		zize = (sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
-		strcpy(filePath, token);
-		strcat(filePath, "/");
-		strcat(filePath, tokens->items[0]);
-		if (fopen(filePath, "r") != NULL)
+		strcpy(tempFilePath, token);
+		strcat(tempFilePath, "/");
+		strcat(tempFilePath, tokens->items [0]); //incecrement ls into first token
+		if (fopen(tempFilePath, "r") != NULL)
 		{
 			check = true;
-			//if possible make correct memory size for tempToken
-			strcpy(tempToken, token);
-
+			filePath = tempFilePath; //filePath ptr points to tempFilePath memory address
 		}
 		else {
-			free(filePath);
+			free(tempFilePath);
 		}
 	}
     token = strtok(NULL, s);
-	//   printf("This is token2: %s\n", token);
    }
-
-	char * filePath = malloc(zize);
-		strcpy(filePath, tempToken);
-		strcat(filePath, "/");
-		strcat(filePath, tokens->items[0]);
-
 	if (!check)
 		printf("Command not found\n"); 
-	else
-		printf("This is correct path: %s\n", filePath);
-	
-	
-	return tokens->items[1];
+	//else
+	//  printf("This is correct path: %s\n", filePath);
+
+	return filePath; //I tHink this what u return
 
 }
+
+char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
+{
+	pid_t pid;
+	int status;
+	pid = fork();
+	
+	if (pid == 0) // do only if child process
+	{
+		char *argv[tokens->size + 1];
+		for (int i = 0; i < tokens->size; i++)
+		{
+			argv[i] = tokens->items[i];
+		}
+		argv[tokens->size] = NULL;
+		execv(filePath, argv);
+	}
+
+	waitpid(pid, &status, 0); //wait for child process to finish	
+
+	return 0;
+}
+
+
+
 
 void ioRedirection(tokenlist *tokens)
 {
 	
 	size_t num_tokens = tokens->size;
 	size_t redirector_positions[2] = {0};
-	// int redirector_count = 0; 		// can be 1 or 2 </> - Though maybe shouldnt use
 	int redirectorIn_count = 0;		// for <
 	int redirectorOut_count = 0;	// for >
+	int redirector_count = 0;
 
 	for(size_t i = 0; i< num_tokens; i++)
 	{
-		if(strcmp(tokens->items[i], "<") == 0)
+		if(strcmp(tokens->items[i], ">") == 0)
 		{
+			redirector_positions[redirector_count] = i;
+			redirector_count++;
+			redirectorOut_count++;
+
+			/*
 			redirector_positions[redirectorIn_count] = i;
 			redirectorIn_count++;
+			*/
 		}
+		/*
 		else if(strcmp(tokens->items[i], ">") == 0)
 		{
 			redirector_positions[redirectorOut_count] = i;
 			redirectorOut_count++;
 		}
+		*/
+	}
+
+	// Line 217 - Creating an array of tokenlists for commands 
+
+	// QUICK TEST 1:05 PM
+
+	
+	tokenlist *command[1] = {NULL};
+	for(int i=0; i <= redirector_count; i++)	// took out redirector_positons[1]
+	{
+		command[i] = new_tokenlist();
+	}
+
+	// Populate the tokenlist for commands
+
+	size_t start = 0;
+	for(int i = 0; i <= redirector_count; i++)
+	{
+		size_t end;
+			if(i == redirector_count)
+			{
+				end = num_tokens;
+			}
+			else
+			{
+				end = redirector_positions[i];
+			}
+		for(size_t j = start; j < end; j++)
+			{
+				add_token(command[i], tokens->items[j]);
+			}
+		start = end + 1;
 	}
 
 
-	char * cmd_path = pathSearch(commands[i]); 
+	// Jasmine Pipe stuff 
+	
+
+	// pipe file descriptors initialization
+	//int pipefds[2][2];
+	pid_t pids[3];
+
+	// Create pipes
 	/*
-
-		FILE *file_in;
-		FILE *file_out;
-
-		scuffed pseudocode yeehaw <3
-		think i might yoink the tildeexpansion idea but needs change
-		cause < & > isnt in spots 0 & 1 like ~/
-
-		if (... == '>')			// for >
+	for (int i = 0; i < redirector_count; i++)
+	{
+		if(pipe(pipefds[i]) == -1)
 		{
-			// writes its standoutput to file_out
-			// if file does not exit, create it
-
-			if(!fopen())
-			{
-				fopen("  ", "w")
-			}
-			// if file already exists, overwrite it
-				// FILE NEEDS RW---- PERMISSION. 
-
-			if(..... == '<')	// for > <
-			{
-				// same as the other (< >)
-
-			}
+			perror("pipe");
+			exit(EXIT_FAILURE);
 		}
-		else if (.... == '<')	// for <
-		{
-			// cmd receives its stand input from file_in
-			// an error will be signaled if file does not exist or is not a regular file
+	}
 
-
-			if(... == '>')		// for < >
-			{
-				// cmd receives standard input from file_in
-				// cmd writes standard output to file_out
-			}
-		}
 	*/
+	
+	// Le Fork
+	for(int i = 0; i <= redirector_count; i++)
+	{
+		pids[i] = fork();
+		if (pids[i] == -1)
+		{
+			perror("fork");
+			exit(EXIT_FAILURE);
+		}
+		
+
+	if(pids[i] == 0)
+	{
+		// if child process
+		if(i > 0)
+		{
+
+			if(redirectorOut_count == 1 && redirectorIn_count == 0) 
+			{
+			int outfd = dup(STDOUT_FILENO);
+			close(STDOUT_FILENO);
+			outfd = open("text.txt", O_RDWR | O_CREAT);
+			dup2(outfd,STDIN_FILENO);
+			close(outfd);
+			printf("Redirected output to test,txt\n");		// test line
+			}
+			
+		}
+
+		char * cmd_path = pathSearch(command[i]); 
+		if(cmd_path)
+		{
+		ExternalCommandExec(command[i], cmd_path);
+		free(cmd_path);
+		}
+		else
+		{
+		fprintf(stderr, "Command not found: %s\n", command[i]->items[0]);
+		exit(EXIT_FAILURE);
+		}
+		exit(EXIT_SUCCESS);
+
+	}
+	}
+	
+	for(int i = 0; i <= redirector_count; i++)
+	{
+		waitpid(pids[i], NULL, 0);
+	}
+
+	for(int i = 0; i <= redirector_count; i++)
+	{
+		free_tokens(command[i]);
+	}
 }
+
+	// < and > stuff from the other day
+
+	 /*for(int i = 0; i <= redirector_count; i++)
+	{
+		if(redirectorOut_count == 1 && redirectorIn_count == 0)							// not sure if this overwrites
+		{
+			int outfd = dup(STDOUT_FILENO);
+			close(STDOUT_FILENO);
+			int fd = open("text.txt", O_RDWR | O_CREAT);
+			dup2(outfd,STDIN_FILENO);
+			close(outfd);
+
+			printf("Redirected output to test,txt\n");		// test line
+		}
+		else if(redirectorIn_count = 1 && redirectorOut_count == 0)
+		{
+			char str[50];
+			int infd = dup(STDIN_FILENO);
+			close(STDIN_FILENO);
+			fgets(str, 60, stdin);			// maybe slap in stdin_fileno here??
+			if(!open())
+			{
+				printf("File does not exist or is not a regular file\n");
+			}
+			dup2(infd, STDIN_FILENO);
+			printf("Redirected input %s", str);
+
+		}
+	}
+
+	*/
+
+	
 
 
 char *get_input(void)
