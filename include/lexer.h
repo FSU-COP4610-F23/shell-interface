@@ -12,6 +12,7 @@ char * environmentVariables(tokenlist * tokens);
 char * tildeExpansion(tokenlist * tokens);
 char * pathSearch(tokenlist * tokens);
 char * ExternalCommandExec(const tokenlist * tokens, char * filePath);
+void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, int has_pipe);
 // char * piping(const tokenlist * tokens);
 // void piping(const char * cmd1, const char *cmd2);
 char *  piping(tokenlist * tokens);

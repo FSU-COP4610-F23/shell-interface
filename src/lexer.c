@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+int JOB_NUMBER = 0;
+
 int main()
 {
 	lexer_parse_token();
@@ -37,7 +39,19 @@ void lexer_parse_token()
 					break;
 				}
 			}
-			if (has_pipe) {
+			//check if last token is &
+			if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
+				//background commands
+				tokenlist * tokens2 = {NULL};
+				tokens2 = new_tokenlist();
+				for (int i = 0; i < tokens->size - 1; i++) //removes & as a token
+				{
+					add_token(tokens2, tokens->items[i]);
+				}
+				JOB_NUMBER++;
+				BackgroundProcess(tokens2, JOB_NUMBER, has_pipe);
+			}
+			else if (has_pipe) {
 				// Execute piped commands
 				piping(tokens);
 			}
@@ -46,12 +60,12 @@ void lexer_parse_token()
 				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
 				tokens->items[1] = tildeExpansion(tokens);
 				tokens->items[0] = pathSearch(tokens);
-				ExternalCommandExec(tokens, tokens->items[0]);			
+				ExternalCommandExec(tokens, tokens->items[0]);	
 			}
 
 		}
 
-		printList(tokens);
+		//printList(tokens);
 
 		free(input);
 		free_tokens(tokens);
@@ -61,11 +75,11 @@ void lexer_parse_token()
 
 void printList(tokenlist * tokens)
 {
-	// print tokens
+	/* print tokens
 	for (int i = 0; i < tokens->size; i++)
 	{
 		printf("token %d: (%s)\n", i, tokens->items[i]);
-	}
+	}*/
 	// print output
 	for (int i = 0; i < tokens->size; i++)
 	{
@@ -205,7 +219,7 @@ char * piping(tokenlist *tokens)
         }
     }
 	// pipe has to be more than one. Pipe cannot be located as the first character, and cannot be last character
-    if (pipe_count < 1 || pipe_positions[0] == 0 || pipe_positions[pipe_count - 1] == num_tokens - 1) 
+    if (pipe_count < 1 || pipe_positions[0] == 0 || pipe_positions[pipe_count - 1] == num_tokens - 1)
 	{
         fprintf(stderr, "Invalid input: Missing command(s)\n");
 		return 0; 
@@ -216,6 +230,7 @@ char * piping(tokenlist *tokens)
     for (int i = 0; i <= pipe_count; i++)  // based on the number of new tokens
 	{
         commands[i] = new_tokenlist();
+		printList(commands[i]);
     }
 
     // Populate the tokenlists for commands
@@ -320,13 +335,63 @@ char * piping(tokenlist *tokens)
     // Free tokenlists
     for (int i = 0; i <= pipe_count; i++) 
 	{
-        free_tokens(commands[i]);
+		free_tokens(commands[i]);
     }
 
 	return 0; 
 }
 
+void BackgroundProcess(tokenlist* tokens, int ID, int pipe){
+	if (pipe) {
+		int status;
+		pid_t PID = fork();
+		if (PID == 0){
+			printf("\n[ %d ] [ %d ]\n", ID, getpid());
+			piping(tokens);
+			printf("[ %d ] + done [ ", ID);
+			printList(tokens);
+			printf("]\n");
+			exit(0);
+		}
+		waitpid(PID, &status, WNOHANG);
 
+	}
+	/* else if (check for part 6) {
+		pid_t PID = fork();
+		if (PID != 0)
+			printf("[%d] [%d]\n", ID, PID);
+		call part 6
+	}*/
+	else {
+		int status;
+		pid_t PID = fork();
+		
+		if (PID == 0) // do only if child process
+		{
+			printf("\n[ %d ] [ %d ]\n", ID, getpid());
+			int status2;
+			pid_t pid2 = fork();
+			if (pid2 == 0) //child^2		
+			{	
+				char *argv[tokens->size + 1];
+				for (int i = 0; i < tokens->size; i++)
+				{
+					argv[i] = tokens->items[i];
+				}
+				argv[tokens->size] = NULL;
+
+				execv(pathSearch(tokens), argv);
+			}
+			waitpid(pid2, &status2, 0);
+			if (WIFEXITED(status2)) {
+				printf("[ %d ] + done [ ", ID);
+				printList(tokens);
+				printf("]\n");
+			}
+		}
+		waitpid(PID, &status, WNOHANG); //don't wait for child process to finish
+	}
+}
 
 char *get_input(void)
 {
