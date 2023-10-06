@@ -20,6 +20,7 @@ void lexer_parse_token();
 void historyCommandList(tokenlist * tokens, char * input);
 bool hasPipe(tokenlist * tokens);
 void executeAllCommands(tokenlist * tokens, char * input);
+void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, bool has_pipe);
 
 char * get_input(void);
 tokenlist * get_tokens(char *input);

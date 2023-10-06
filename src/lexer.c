@@ -7,11 +7,19 @@
 #include <sys/wait.h>
 
 #define MAX_HISTORY_SIZE 3
+int JOB_NUMBER = 0;
 
 struct commandHistory {
     char commands[MAX_HISTORY_SIZE][200]; // Assuming commands are less than 200 characters
     int count;
 };
+
+// struct backgroundProcesses 
+// {
+// 	int jobNumber;
+//     pid_t pid; //process identification. used to represent process ids.
+//     char commandLine[200];
+// };
 
 struct commandHistory history;
 
@@ -50,7 +58,19 @@ void executeAllCommands(tokenlist * tokens, char * input)
 		if (tokens->size > 0) 
 		{
 			historyCommandList(tokens, input);
-			if (hasPipe(tokens)) 
+			//check if last token is &
+			if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
+				//background commands
+				tokenlist * tokens2 = {NULL};
+				tokens2 = new_tokenlist();
+				for (int i = 0; i < tokens->size - 1; i++) //removes & as a token
+				{
+					add_token(tokens2, tokens->items[i]);
+				}
+				JOB_NUMBER++;
+				BackgroundProcess(tokens2, JOB_NUMBER, hasPipe(tokens));
+			}
+			else if (hasPipe(tokens)) 
 			{
 				piping(tokens);
 			}
@@ -252,21 +272,21 @@ char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 
 char * piping(tokenlist *tokens) 
 {
-    size_t num_tokens = tokens->size;
+    size_t numTokens = tokens->size;
 
     // Find the positions of the pipe tokens ("|")
-    size_t pipe_positions[2] = {0};
-    int pipe_count = 0; // Use this becasue there could be one or two pipes
-    for (size_t i = 0; i < num_tokens; i++) 
+    size_t pipePositions[2] = {0};
+    int pipeCount = 0; // Use this becasue there could be one or two pipes
+    for (size_t i = 0; i < numTokens; i++) 
 	{
         if (strcmp(tokens->items[i], "|") == 0) 
 		{
-            pipe_positions[pipe_count] = i;
-            pipe_count++;
+            pipePositions[pipeCount] = i;
+            pipeCount++;
         }
     }
 	// pipe has to be more than one. Pipe cannot be located as the first character, and cannot be last character
-    if (pipe_count < 1 || pipe_positions[0] == 0 || pipe_positions[pipe_count - 1] == num_tokens - 1) 
+    if (pipeCount < 1 || pipePositions[0] == 0 || pipePositions[pipeCount - 1] == numTokens - 1) 
 	{
         fprintf(stderr, "Invalid input: Missing command(s)\n");
 		return 0; 
@@ -274,23 +294,23 @@ char * piping(tokenlist *tokens)
 
     // Create an array of tokenlists for commands (There can be two and three commands)
     tokenlist * commands[3] = {NULL};
-    for (int i = 0; i <= pipe_count; i++)  // based on the number of new tokens
+    for (int i = 0; i <= pipeCount; i++)  // based on the number of new tokens
 	{
         commands[i] = new_tokenlist();
     }
 
     // Populate the tokenlists for commands
     size_t start = 0; // 
-    for (int i = 0; i <= pipe_count; i++) 
+    for (int i = 0; i <= pipeCount; i++) 
 	{
         size_t end;
-		if (i == pipe_count)
+		if (i == pipeCount)
 		{
-			end	= num_tokens;
+			end	= numTokens;
 		}
 		else
 		{
-			end = pipe_positions[i];
+			end = pipePositions[i];
 		}
         for (size_t j = start; j < end; j++) 
 		{
@@ -304,7 +324,7 @@ char * piping(tokenlist *tokens)
     pid_t pids[3]; 
 
     // Create pipes
-    for (int i = 0; i < pipe_count; i++) 
+    for (int i = 0; i < pipeCount; i++) 
 	{
         if (pipe(pipefds[i]) == -1) 
 		{
@@ -313,7 +333,7 @@ char * piping(tokenlist *tokens)
         }
     }
 
-    for (int i = 0; i <= pipe_count; i++) 
+    for (int i = 0; i <= pipeCount; i++) 
 	{
         pids[i] = fork();
         if (pids[i] == -1) 
@@ -332,7 +352,7 @@ char * piping(tokenlist *tokens)
                 close(pipefds[i - 1][0]);
             }
 
-            if (i < pipe_count) 
+            if (i < pipeCount) 
 			{
                 // Redirect standard output to the current pipe
                 dup2(pipefds[i][1], STDOUT_FILENO);
@@ -340,18 +360,18 @@ char * piping(tokenlist *tokens)
             }
 
             // Close all pipe file descriptors
-            for (int j = 0; j < pipe_count; j++) 
+            for (int j = 0; j < pipeCount; j++) 
 			{
                 close(pipefds[j][0]);
                 close(pipefds[j][1]);
             }
 
             // Execute the command
-            char * cmd_path = pathSearch(commands[i]);
-            if (cmd_path) 
+            char * commandPath = pathSearch(commands[i]);
+            if (commandPath) 
 			{
-                ExternalCommandExec(commands[i], cmd_path);
-                free(cmd_path);
+                ExternalCommandExec(commands[i], commandPath);
+                free(commandPath);
             } 
 			else 
 			{
@@ -364,22 +384,23 @@ char * piping(tokenlist *tokens)
         }
     }
 	
-    // Parent process
-    // Close all pipe file descriptors
-    for (int j = 0; j < pipe_count; j++) 
+	/**
+	 * 
+	 * Close all pipe file descriptors
+	*/
+	// Parent process
+    for (int j = 0; j < pipeCount; j++) 
 	{
         close(pipefds[j][0]);
         close(pipefds[j][1]);
     }
-
     // Wait for all child processes to complete
-    for (int i = 0; i <= pipe_count; i++) 
+    for (int i = 0; i <= pipeCount; i++) 
 	{
         waitpid(pids[i], NULL, 0);
     }
-
     // Free tokenlists
-    for (int i = 0; i <= pipe_count; i++) 
+    for (int i = 0; i <= pipeCount; i++) 
 	{
         free_tokens(commands[i]);
     }
@@ -395,6 +416,7 @@ char * internalCommandExecution(tokenlist * tokens)
 		// Display the last three valid commands
         
 		int start; 
+
 		if (history.count > 3)
 		{
 			start = history.count - 3; // if we pass three commands then start from 1 again
@@ -421,6 +443,7 @@ char * internalCommandExecution(tokenlist * tokens)
 		exit(0);
 		printf("User wants to exit");
 	}
+
 	else if(strcmp(tokens->items[0], "cd") == 0)
 	{
 		// if there are no arguments supplied
@@ -440,11 +463,63 @@ char * internalCommandExecution(tokenlist * tokens)
 		}
 		chdir(tokens->items[1]);
 	}
-	else if (strcmp(tokens->item[0], "jobs") == 0)
+	else if (strcmp(tokens->items[0], "jobs") == 0)
 	{
 		
 	}
 	return tokens->items[1]; 
+}
+
+void BackgroundProcess(tokenlist* tokens, int ID, bool pipe){
+	if (pipe) {
+		int status;
+		pid_t PID = fork();
+		if (PID == 0){
+			printf("\n[ %d ] [ %d ]\n", ID, getpid());
+			piping(tokens);
+			printf("[ %d ] + done [ ", ID);
+			printList(tokens);
+			printf("]\n");
+			exit(0);
+		}
+		waitpid(PID, &status, WNOHANG);
+
+	}
+	/* else if (check for part 6) {
+		pid_t PID = fork();
+		if (PID != 0)
+			printf("[%d] [%d]\n", ID, PID);
+		call part 6
+	}*/
+	else {
+		int status;
+		pid_t PID = fork();
+		
+		if (PID == 0) // do only if child process
+		{
+			printf("\n[ %d ] [ %d ]\n", ID, getpid());
+			int status2;
+			pid_t pid2 = fork();
+			if (pid2 == 0) //child^2		
+			{	
+				char *argv[tokens->size + 1];
+				for (int i = 0; i < tokens->size; i++)
+				{
+					argv[i] = tokens->items[i];
+				}
+				argv[tokens->size] = NULL;
+
+				execv(pathSearch(tokens), argv);
+			}
+			waitpid(pid2, &status2, 0);
+			if (WIFEXITED(status2)) {
+				printf("[ %d ] + done [ ", ID);
+				printList(tokens);
+				printf("]\n");
+			}
+		}
+		waitpid(PID, &status, WNOHANG); //don't wait for child process to finish
+	}
 }
 
 char *get_input(void)
