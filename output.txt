@@ -1,5 +1,1 @@
-token 0: (echo)
-token 1: (hello)
-token 2: (world)
-echo hello world 
-masopeh@linprog6.cs.fsu.edu:/home/majors/masopeh/courses/COP4610: Operating Systems/Project 1/shell/starter>
+hello jasmine

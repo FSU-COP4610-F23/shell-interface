@@ -77,7 +77,8 @@ void executeAllCommands(tokenlist * tokens, char * input)
 				output_redirection = i;
 			}
 		}
-
+			
+		
 	
 		// Call ioRedirection function to handle redirection
 		if (input_redirection != -1 || output_redirection != -1)
@@ -85,6 +86,24 @@ void executeAllCommands(tokenlist * tokens, char * input)
 			ioRedirection(tokens);
 		}
 		*/
+
+		
+		// int has_redirector = 0;
+		// for (size_t i = 0; i < tokens->size; i++) 
+		// {
+		// 	if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0) 
+		// 	{
+		// 		has_redirector = 1;
+		// 		break;
+		// 	}
+		// }
+		// if (has_redirector) 
+		// {
+		// 	// Execute piped commands
+		// 	ioRedirection(tokens);
+		// }
+
+
 		//check if last token is &
 		if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
 			//background commands
@@ -275,7 +294,96 @@ char * pathSearch(tokenlist * tokens)
 		return filePath; 
 }
 
-char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
+void ioRedirection(tokenlist *tokens)
+{
+    int input_redirection = -1;  // File descriptor for input redirection
+    int output_redirection = -1; // File descriptor for output redirection
+
+    // Check for input redirection
+    for (int i = 0; i < tokens->size; i++)
+    {
+        if (strcmp(tokens->items[i], "<") == 0)
+        {
+            input_redirection = i; // Store the index of the "<" token
+            break;
+        }
+    }
+
+    // Check for output redirection
+    for (int i = 0; i < tokens->size; i++)
+    {
+        if (strcmp(tokens->items[i], ">") == 0)
+        {
+            output_redirection = i; // Store the index of the ">" token
+            break;
+        }
+    }
+
+    if (input_redirection != -1)
+    {
+        // Handle input redirection
+        if (input_redirection + 1 < tokens->size)
+        {
+            char *input_file = tokens->items[input_redirection + 1];
+            // Open the input file for reading and replace standard input
+			close(0);
+            int fd = open(input_file, O_RDONLY);
+            if (fd == -1)
+            {
+                perror("open");
+                exit(EXIT_FAILURE);
+            }
+            // dup2(fd, STDIN_FILENO);
+            // close(fd);
+
+            // Remove the redirection tokens and the input file from the token list
+            for (int i = input_redirection; i < tokens->size - 2; i++)
+            {
+                tokens->items[i] = tokens->items[i + 2];
+            }
+            tokens->size -= 2;
+        }
+        else
+        {
+            fprintf(stderr, "Error: Missing input file for redirection.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (output_redirection != -1)
+    {
+        // Handle output redirection
+        if (output_redirection + 1 < tokens->size)
+        {
+            char *output_file = tokens->items[output_redirection + 1];
+            // Open the output file for writing and replace standard output'
+			close(1);
+            int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+
+            if (fd == -1)
+            {
+                perror("open");
+                exit(EXIT_FAILURE);
+            }
+            // dup2(fd, STDOUT_FILENO);
+            // close(fd);
+
+            // Remove the redirection tokens and the output file from the token list
+            for (int i = output_redirection; i < tokens->size - 2; i++)
+            {
+                tokens->items[i] = tokens->items[i + 2];
+            }
+            tokens->size -= 2;
+        }
+        else
+        {
+            fprintf(stderr, "Error: Missing output file for redirection.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+char * ExternalCommandExec(tokenlist * tokens, char * filePath)
 {
 	pid_t pid;
 	int status;
@@ -283,6 +391,22 @@ char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 	
 	if (pid == 0) // do only if child process
 	{
+		int has_redirector = 0;
+		for (size_t i = 0; i < tokens->size; i++) 
+		{
+			if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0) 
+			{
+				has_redirector = 1;
+				break;
+			}
+		}
+		if (has_redirector) 
+		{
+			// Execute piped commands
+			ioRedirection(tokens);
+		}
+
+		// have to call redirection in here
 		char *argv[tokens->size + 1];
 		for (int i = 0; i < tokens->size; i++)
 		{
@@ -297,91 +421,7 @@ char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 	return 0;
 }
 
-// void ioRedirection(tokenlist *tokens)
-// {
-//     int input_redirection = -1;  // File descriptor for input redirection
-//     int output_redirection = -1; // File descriptor for output redirection
 
-//     // Check for input redirection
-//     for (int i = 0; i < tokens->size; i++)
-//     {
-//         if (strcmp(tokens->items[i], "<") == 0)
-//         {
-//             input_redirection = i; // Store the index of the "<" token
-//             break;
-//         }
-//     }
-
-//     // Check for output redirection
-//     for (int i = 0; i < tokens->size; i++)
-//     {
-//         if (strcmp(tokens->items[i], ">") == 0)
-//         {
-//             output_redirection = i; // Store the index of the ">" token
-//             break;
-//         }
-//     }
-
-//     if (input_redirection != -1)
-//     {
-//         // Handle input redirection
-//         if (input_redirection + 1 < tokens->size)
-//         {
-//             char *input_file = tokens->items[input_redirection + 1];
-//             // Open the input file for reading and replace standard input
-//             int fd = open(input_file, O_RDONLY);
-//             if (fd == -1)
-//             {
-//                 perror("open");
-//                 exit(EXIT_FAILURE);
-//             }
-//             dup2(fd, STDIN_FILENO);
-//             close(fd);
-
-//             // Remove the redirection tokens and the input file from the token list
-//             for (int i = input_redirection; i < tokens->size - 2; i++)
-//             {
-//                 tokens->items[i] = tokens->items[i + 2];
-//             }
-//             tokens->size -= 2;
-//         }
-//         else
-//         {
-//             fprintf(stderr, "Error: Missing input file for redirection.\n");
-//             exit(EXIT_FAILURE);
-//         }
-//     }
-
-//     if (output_redirection != -1)
-//     {
-//         // Handle output redirection
-//         if (output_redirection + 1 < tokens->size)
-//         {
-//             char *output_file = tokens->items[output_redirection + 1];
-//             // Open the output file for writing and replace standard output
-//             int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-//             if (fd == -1)
-//             {
-//                 perror("open");
-//                 exit(EXIT_FAILURE);
-//             }
-//             dup2(fd, STDOUT_FILENO);
-//             close(fd);
-
-//             // Remove the redirection tokens and the output file from the token list
-//             for (int i = output_redirection; i < tokens->size - 2; i++)
-//             {
-//                 tokens->items[i] = tokens->items[i + 2];
-//             }
-//             tokens->size -= 2;
-//         }
-//         else
-//         {
-//             fprintf(stderr, "Error: Missing output file for redirection.\n");
-//             exit(EXIT_FAILURE);
-//         }
-//     }
-// }
 
 char * piping(tokenlist *tokens) 
 {

@@ -1,0 +1,53 @@
+alphabet.txt
+bin
+include
+Makefile
+obj
+output.txt
+outpu.txt
+README.md
+src
+temp_bg_1.txt
+test.txt
+token 0: (/bin/ls)
+/bin/ls 
+masopeh@linprog6.cs.fsu.edu:/home/majors/masopeh/courses/COP4610: Operating Systems/Project 1/shell/starter>alphabet.txt
+bin
+include
+Makefile
+obj
+output.txt
+outpu.txt
+README.md
+src
+temp_bg_1.txt
+test.txt
+token 0: (/bin/ls)
+/bin/ls 
+masopeh@linprog6.cs.fsu.edu:/home/majors/masopeh/courses/COP4610: Operating Systems/Project 1/shell/starter>alphabet.txt
+bin
+include
+Makefile
+obj
+output.txt
+outpu.txt
+README.md
+src
+temp_bg_1.txt
+test.txt
+token 0: (/bin/ls)
+/bin/ls 
+masopeh@linprog6.cs.fsu.edu:/home/majors/masopeh/courses/COP4610: Operating Systems/Project 1/shell/starter>alphabet.txt
+bin
+include
+Makefile
+obj
+output.txt
+outpu.txt
+README.md
+src
+temp_bg_1.txt
+test.txt
+token 0: (/bin/ls)
+/bin/ls 
+masopeh@linprog6.cs.fsu.edu:/home/majors/masopeh/courses/COP4610: Operating Systems/Project 1/shell/starter>
