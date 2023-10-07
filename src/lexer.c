@@ -12,7 +12,8 @@ int main()
 {
 	lexer_parse_token();
 
-	return 0;
+	return 0; 
+	
 }
 
 void lexer_parse_token()
@@ -27,19 +28,39 @@ void lexer_parse_token()
 		 */
 		char *input = get_input();
 		tokenlist * tokens = get_tokens(input);
-		char *filePath;
 
-		tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
-		tokens->items[1] = tildeExpansion(tokens);
-		filePath = pathSearch(tokens);
-		ExternalCommandExec(tokens, filePath);
+		if (tokens->size > 0) 
+		{
+			// Check if the input contains a < or > character
+			int has_redirector = 0;
+			for (size_t i = 0; i < tokens->size; i++) 
+			{
+				if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0) 
+				{
+					has_redirector = 1;
+					break;
+				}
+			}
+			if (has_redirector) 
+			{
+				// Execute piped commands
+				ioRedirection(tokens);
+			}
+			else
+			{
+				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
+				tokens->items[1] = tildeExpansion(tokens);
+				tokens->items[0] = pathSearch(tokens);
+				ExternalCommandExec(tokens, tokens->items[0]);
+			}
+		}
 
-		// printList(tokens);
+		printList(tokens);
 
 		free(input);
 		free_tokens(tokens);
 	}
-}
+}	
 
 void printList(tokenlist * tokens)
 {
@@ -150,7 +171,7 @@ char * pathSearch(tokenlist * tokens)
 		return filePath; 
 }
 
-void ExternalCommandExec(const tokenlist * tokens, char * filePath)
+char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 {
 	pid_t pid;
 	int status;
@@ -167,7 +188,9 @@ void ExternalCommandExec(const tokenlist * tokens, char * filePath)
 		execv(filePath, argv);
 	}
 
-	waitpid(pid, &status, 0); //wait for child process to finish	
+	waitpid(pid, &status, 0); //wait for child process to finish
+
+	return 0;
 
 }
 
@@ -234,8 +257,7 @@ void ioRedirection(tokenlist *tokens)
         }
         close(in_file); // Close the original file descriptor
     }
-
-    if (output_redirect)
+    else if (output_redirect)
     {
         if (dup2(out_file, STDOUT_FILENO) == -1)
         {

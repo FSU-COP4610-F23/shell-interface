@@ -1,0 +1,6 @@
+token 0: ($echo)
+token 1: (mana)
+token 2: (>)
+token 3: (output.txt)
+$echo mana > output.txt 
+afields@linprog6.cs.fsu.edu:/home/majors/afields/Project1os/project-1-group-5/project-1-group-5>
