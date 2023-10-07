@@ -12,6 +12,7 @@ char * environmentVariables(tokenlist * tokens);
 char * tildeExpansion(tokenlist * tokens);
 char * pathSearch(tokenlist * tokens);
 char * ExternalCommandExec(const tokenlist * tokens, char * filePath);
+void ioRedirection(tokenlist * tokens);
 char *  piping(tokenlist * tokens);
 char * internalCommandExecution(tokenlist * tokens);
 void printList(tokenlist * tokens); 

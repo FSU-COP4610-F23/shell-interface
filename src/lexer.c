@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <fcntl.h>
+#include <sys/stat.h>
+
 #define MAX_HISTORY_SIZE 3
 int JOB_NUMBER = 0;
 
@@ -14,12 +17,12 @@ struct commandHistory {
     int count;
 };
 
-// struct backgroundProcesses 
-// {
-// 	int jobNumber;
-//     pid_t pid; //process identification. used to represent process ids.
-//     char commandLine[200];
-// };
+struct backgroundProcesses 
+{
+	int jobNumber;
+    pid_t pid; //process identification. used to represent process ids.
+    char commandLine[200];
+};
 
 struct commandHistory history;
 
@@ -53,46 +56,70 @@ void lexer_parse_token()
 
 void executeAllCommands(tokenlist * tokens, char * input)
 {
-	// while(1)
-	// {
-		if (tokens->size > 0) 
+
+	if (tokens->size > 0) 
+	{
+		historyCommandList(tokens, input);
+
+		/*
+		// Check for input or output redirection
+		int input_redirection = -1;  // Index of "<" token
+		int output_redirection = -1; // Index of ">" token
+
+		for (int i = 0; i < tokens->size; i++)
 		{
-			historyCommandList(tokens, input);
-			//check if last token is &
-			if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
-				//background commands
-				tokenlist * tokens2 = {NULL};
-				tokens2 = new_tokenlist();
-				for (int i = 0; i < tokens->size - 1; i++) //removes & as a token
-				{
-					add_token(tokens2, tokens->items[i]);
-				}
-				JOB_NUMBER++;
-				BackgroundProcess(tokens2, JOB_NUMBER, hasPipe(tokens));
-			}
-			else if (hasPipe(tokens)) 
+			if (strcmp(tokens->items[i], "<") == 0)
 			{
-				piping(tokens);
+				input_redirection = i;
 			}
-			else 
+			else if (strcmp(tokens->items[i], ">") == 0)
 			{
-				if (strcmp(tokens->items[0],"exit") == 0 || strcmp(tokens->items[0],"cd") == 0)
-				{
-					// running inernal command execution
-					internalCommandExecution(tokens);			
-				}
-				else
-				{
-					tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
-					tokens->items[1] = tildeExpansion(tokens);
-					tokens->items[0] = pathSearch(tokens);
-					ExternalCommandExec(tokens, tokens->items[0]);
-				}
+				output_redirection = i;
 			}
 		}
-		// print tokens
-		printList(tokens);
-	// }
+
+	
+		// Call ioRedirection function to handle redirection
+		if (input_redirection != -1 || output_redirection != -1)
+		{
+			ioRedirection(tokens);
+		}
+		*/
+		//check if last token is &
+		if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
+			//background commands
+			tokenlist * tokens2 = {NULL};
+			tokens2 = new_tokenlist();
+			for (int i = 0; i < tokens->size - 1; i++) //removes & as a token
+			{
+				add_token(tokens2, tokens->items[i]);
+			}
+			JOB_NUMBER++;
+			BackgroundProcess(tokens2, JOB_NUMBER, hasPipe(tokens));
+		}
+		else if (hasPipe(tokens)) 
+		{
+			piping(tokens);
+		}
+		else 
+		{
+			if (strcmp(tokens->items[0],"exit") == 0 || strcmp(tokens->items[0],"cd") == 0 || strcmp(tokens->items[0],"jobs") == 0 )
+			{
+				// running inernal command execution
+				internalCommandExecution(tokens);			
+			}
+			else
+			{
+				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
+				tokens->items[1] = tildeExpansion(tokens);
+				tokens->items[0] = pathSearch(tokens);
+				ExternalCommandExec(tokens, tokens->items[0]);
+			}
+		}
+	}
+	// print tokens
+	printList(tokens);
+
 }
 
 void historyCommandList(tokenlist * tokens, char * input )
@@ -269,6 +296,92 @@ char * ExternalCommandExec(const tokenlist * tokens, char * filePath)
 
 	return 0;
 }
+
+// void ioRedirection(tokenlist *tokens)
+// {
+//     int input_redirection = -1;  // File descriptor for input redirection
+//     int output_redirection = -1; // File descriptor for output redirection
+
+//     // Check for input redirection
+//     for (int i = 0; i < tokens->size; i++)
+//     {
+//         if (strcmp(tokens->items[i], "<") == 0)
+//         {
+//             input_redirection = i; // Store the index of the "<" token
+//             break;
+//         }
+//     }
+
+//     // Check for output redirection
+//     for (int i = 0; i < tokens->size; i++)
+//     {
+//         if (strcmp(tokens->items[i], ">") == 0)
+//         {
+//             output_redirection = i; // Store the index of the ">" token
+//             break;
+//         }
+//     }
+
+//     if (input_redirection != -1)
+//     {
+//         // Handle input redirection
+//         if (input_redirection + 1 < tokens->size)
+//         {
+//             char *input_file = tokens->items[input_redirection + 1];
+//             // Open the input file for reading and replace standard input
+//             int fd = open(input_file, O_RDONLY);
+//             if (fd == -1)
+//             {
+//                 perror("open");
+//                 exit(EXIT_FAILURE);
+//             }
+//             dup2(fd, STDIN_FILENO);
+//             close(fd);
+
+//             // Remove the redirection tokens and the input file from the token list
+//             for (int i = input_redirection; i < tokens->size - 2; i++)
+//             {
+//                 tokens->items[i] = tokens->items[i + 2];
+//             }
+//             tokens->size -= 2;
+//         }
+//         else
+//         {
+//             fprintf(stderr, "Error: Missing input file for redirection.\n");
+//             exit(EXIT_FAILURE);
+//         }
+//     }
+
+//     if (output_redirection != -1)
+//     {
+//         // Handle output redirection
+//         if (output_redirection + 1 < tokens->size)
+//         {
+//             char *output_file = tokens->items[output_redirection + 1];
+//             // Open the output file for writing and replace standard output
+//             int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+//             if (fd == -1)
+//             {
+//                 perror("open");
+//                 exit(EXIT_FAILURE);
+//             }
+//             dup2(fd, STDOUT_FILENO);
+//             close(fd);
+
+//             // Remove the redirection tokens and the output file from the token list
+//             for (int i = output_redirection; i < tokens->size - 2; i++)
+//             {
+//                 tokens->items[i] = tokens->items[i + 2];
+//             }
+//             tokens->size -= 2;
+//         }
+//         else
+//         {
+//             fprintf(stderr, "Error: Missing output file for redirection.\n");
+//             exit(EXIT_FAILURE);
+//         }
+//     }
+// }
 
 char * piping(tokenlist *tokens) 
 {
@@ -465,12 +578,14 @@ char * internalCommandExecution(tokenlist * tokens)
 	}
 	else if (strcmp(tokens->items[0], "jobs") == 0)
 	{
-		
+		printf("Output a list of active processes\n");
 	}
+
 	return tokens->items[1]; 
 }
 
-void BackgroundProcess(tokenlist* tokens, int ID, bool pipe){
+void BackgroundProcess(tokenlist* tokens, int ID, bool pipe)
+{
 	if (pipe) {
 		int status;
 		pid_t PID = fork();
