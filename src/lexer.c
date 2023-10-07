@@ -440,7 +440,7 @@ char * internalCommandExecution(tokenlist * tokens)
 		}
 		chdir(tokens->items[1]);
 	}
-	else if (strcmp(tokens->item[0], "jobs") == 0)
+	else if (strcmp(tokens->items[0], "jobs") == 0)
 	{
 		
 	}
