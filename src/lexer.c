@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "mytimeout.h"
 
 #define MAX_HISTORY_SIZE 3
 
@@ -18,6 +19,7 @@ struct commandHistory history;
 int main()
 {
 	history.count = 0;
+
 	lexer_parse_token();
 
 	return 0;

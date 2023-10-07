@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <string.h>
+#include "mytimeout.h"
 
 volatile sig_atomic_t timeout_flag = 0;
 
@@ -14,6 +15,14 @@ void handle_timeout(int signum) {
 }
 
 int main(int argc, char *argv[]) 
+{
+
+    create_timeout(argc, argv);
+    return 0;
+}
+
+
+void create_timeout(int argc, char *argv[]) 
 {
     printf("We go in here\n");
     if (argc < 2) 
@@ -24,7 +33,7 @@ int main(int argc, char *argv[])
 
     signal(SIGALRM, handle_timeout);
 
-    // Set a timeout of 5 seconds (adjust as needed)
+    // Set a timeout of 5 seconds (adjust as needed) //
     alarm(argc);
 
     pid_t child_pid = fork(); // fork 
@@ -80,4 +89,5 @@ int main(int argc, char *argv[])
     }
 
     return 0;
+
 }
