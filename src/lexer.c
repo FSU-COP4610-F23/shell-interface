@@ -25,6 +25,8 @@ struct backgroundProcesses
 };
 
 struct commandHistory history;
+// Define a global array to store background process information
+struct backgroundProcesses backgroundProcessList[MAX_HISTORY_SIZE];
 
 int main()
 {
@@ -250,8 +252,6 @@ char * tildeExpansion(tokenlist *tokens)
 	return tokens->items[1];
 }
 
-// https://www.tutorialspoint.com/c_standard_library/c_function_strtok.htm
-
 char * pathSearch(tokenlist * tokens)
 {
    char * fullPath = malloc(sizeof(char) * strlen(getenv("PATH")));
@@ -420,8 +420,6 @@ char * ExternalCommandExec(tokenlist * tokens, char * filePath)
 
 	return 0;
 }
-
-
 
 char * piping(tokenlist *tokens) 
 {
@@ -619,6 +617,7 @@ char * internalCommandExecution(tokenlist * tokens)
 	else if (strcmp(tokens->items[0], "jobs") == 0)
 	{
 		printf("Output a list of active processes\n");
+		listActiveBackgroundProcesses();
 	}
 
 	return tokens->items[1]; 
@@ -638,6 +637,8 @@ void BackgroundProcess(tokenlist* tokens, int ID, bool pipe)
 			exit(0);
 		}
 		waitpid(PID, &status, WNOHANG);
+
+		
 
 	}
 	/* else if (check for part 6) {
@@ -676,6 +677,135 @@ void BackgroundProcess(tokenlist* tokens, int ID, bool pipe)
 		waitpid(PID, &status, WNOHANG); //don't wait for child process to finish
 	}
 }
+
+
+
+// Function to store the PID and command line of a background process
+void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine)
+{
+    // Find an empty slot in the backgroundProcessList and store the information
+    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
+    {
+        if (backgroundProcessList[i].pid == 0)
+        {
+            backgroundProcessList[i].jobNumber = jobNumber;
+            backgroundProcessList[i].pid = pid;
+            strncpy(backgroundProcessList[i].commandLine, commandLine, sizeof(backgroundProcessList[i].commandLine) - 1);
+            backgroundProcessList[i].commandLine[sizeof(backgroundProcessList[i].commandLine) - 1] = '\0';
+            break;
+        }
+    }
+}
+
+// Function to get the PID of a background process based on its job number
+pid_t getProcessPID(int jobNumber)
+{
+    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
+    {
+        if (backgroundProcessList[i].jobNumber == jobNumber)
+        {
+            return backgroundProcessList[i].pid;
+        }
+    }
+    return 0; // Return 0 if no matching job number is found (indicating an error)
+}
+
+// Function to get the command line of a background process based on its job number
+const char *getProcessCommandLine(int jobNumber)
+{
+    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
+    {
+        if (backgroundProcessList[i].jobNumber == jobNumber)
+        {
+            return backgroundProcessList[i].commandLine;
+        }
+    }
+    return NULL; // Return NULL if no matching job number is found (indicating an error)
+}
+
+bool isProcessActive(int jobNumber)
+{
+    // Get the PID of the background process based on its job number
+    pid_t pid = getProcessPID(jobNumber);
+
+    if (pid == 0)
+    {
+        // If no matching job number is found, consider the process inactive
+        return false;
+    }
+
+    // Check the status of the process using waitpid with WNOHANG
+    int status;
+    pid_t result = waitpid(pid, &status, WNOHANG);
+
+    if (result == -1)
+    {
+        // An error occurred while checking the process status
+        // You may want to handle this error case accordingly
+        return false;
+    }
+    else if (result == 0)
+    {
+        // The process is still running
+        return true;
+    }
+    else
+    {
+        // The process has terminated
+        return false;
+    }
+}
+
+void listActiveBackgroundProcesses()
+{
+    if (backgroundProcessesCount() == 0)
+    {
+        printf("No active background processes.\n");
+    }
+    else
+    {
+        printf("Active background processes:\n");
+        printActiveBackgroundProcesses();
+    }
+}
+
+int backgroundProcessesCount()
+{
+    int count = 0;
+
+    // Loop through your background processes and count them.
+    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
+    {
+        // Check if the process with jobNumber 'i' is active (still running)
+        if (isProcessActive(i))
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+void printActiveBackgroundProcesses()
+{
+    // Implement this function to print the active background processes
+    // in the required format "[Job number]+ [CMD's PID] [CMD's command line]".
+
+    // You can iterate through your backgroundProcesses data structure
+    // and print the information for each active process.
+
+    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
+    {
+        // Check if the process with jobNumber 'i' is active (still running)
+        if (isProcessActive(i))
+        {
+            // Print the information for the active process in the required format.
+            printf("[%d]+ [%d] %s\n", i, getProcessPID(i), getProcessCommandLine(i));
+        }
+    }
+}
+
+
 
 char *get_input(void)
 {

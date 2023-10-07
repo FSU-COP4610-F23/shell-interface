@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 typedef struct {
     char ** items;
@@ -21,7 +22,16 @@ void lexer_parse_token();
 void historyCommandList(tokenlist * tokens, char * input);
 bool hasPipe(tokenlist * tokens);
 void executeAllCommands(tokenlist * tokens, char * input);
+
 void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, bool has_pipe);
+void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine);
+pid_t getProcessPID(int jobNumber);
+const char *getProcessCommandLine(int jobNumber);
+bool isProcessActive(int jobNumber);
+void listActiveBackgroundProcesses();
+void printActiveBackgroundProcesses();
+int backgroundProcessesCount();
+
 
 char * get_input(void);
 tokenlist * get_tokens(char *input);
