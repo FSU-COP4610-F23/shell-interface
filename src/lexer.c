@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #define MAX_HISTORY_SIZE 3
+#define MAX_BACKGROUND_PROCESSES 10
 int JOB_NUMBER = 0;
 
 struct commandHistory {
@@ -17,16 +18,17 @@ struct commandHistory {
     int count;
 };
 
-struct backgroundProcesses 
-{
-	int jobNumber;
-    pid_t pid; //process identification. used to represent process ids.
-    char commandLine[200];
-};
+typedef struct {
+    int jobNumber;
+    pid_t pid;
+    char commandLine[256];
+} backgroundProcess;
 
 struct commandHistory history;
+
 // Define a global array to store background process information
-struct backgroundProcesses backgroundProcessList[MAX_HISTORY_SIZE];
+backgroundProcess backgroundProcesses[MAX_BACKGROUND_PROCESSES];
+int numBackgroundProcesses = 0;
 
 int main()
 {
@@ -143,7 +145,7 @@ void executeAllCommands(tokenlist * tokens, char * input)
 		}
 	}
 	// print tokens
-	printList(tokens);
+	// printList(tokens);
 
 }
 
@@ -645,194 +647,210 @@ char * internalCommandExecution(tokenlist * tokens)
 	return tokens->items[1]; 
 }
 
+// void BackgroundProcess(tokenlist* tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector)
+// {
+// 	if (has_pipe) {
+// 		int status;
+// 		pid_t PID = fork();
+// 		if (PID == 0)
+// 		{
+// 			printf("We go in here\n");
+// 			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid()); // we want it print this out and go back to prompt while it runs in background
+// 			piping(tokens);
+// 			printf("[ %d ] + done [ ", JOB_NUMBER);
+// 			// printList(tokens);
+// 			printf("]\n");
+// 			exit(0);
+// 		}
+// 		waitpid(PID, &status, WNOHANG);
+// 	}
+// 	else if (has_redirector) // this i sused in t
+// 	{
+// 		int status;
+// 		pid_t PID = fork();
+// 		if (PID != 0)
+// 		{
+// 			printf("[%d] [%d]\n", JOB_NUMBER, PID);
+// 			char* cmdLine = commandLine(tokens);
+//             storeBackgroundProcessInfo(JOB_NUMBER, PID, cmdLine);
+//             free(cmdLine);
+// 			piping(tokens);
+// 			printf("[ %d ] + done [ ", JOB_NUMBER);
+// 			// printList(tokens);
+// 			printf("]\n");
+// 			exit(0);
+// 		}
+// 		waitpid(PID, &status, WNOHANG);
+// 	}
+// 	else {
+// 		int status;
+// 		pid_t PID = fork();
+		
+// 		char* cmdLine = commandLine(tokens);
+//         storeBackgroundProcessInfo(JOB_NUMBER, getpid(), cmdLine);
+//         free(cmdLine);
+
+// 		if (PID == 0) // do only if child process
+// 		{
+// 			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
+// 			int status2;
+// 			pid_t pid2 = fork();
+// 			if (pid2 == 0) //child^2		
+// 			{	
+// 				char *argv[tokens->size + 1];
+// 				for (int i = 0; i < tokens->size; i++)
+// 				{
+// 					argv[i] = tokens->items[i];
+// 				}
+// 				argv[tokens->size] = NULL;
+
+// 				storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+// 				execv(pathSearch(tokens), argv);
+// 			}
+// 			waitpid(pid2, &status2, 0);
+// 			if (WIFEXITED(status2)) {
+// 				printf("[ %d ] + done [ ", JOB_NUMBER);
+// 				// printList(tokens);
+// 				printf("]\n");
+// 			}
+// 		}
+// 		waitpid(PID, &status, WNOHANG); //don't wait for child process to finish
+// 	}
+// }
+
+
 void BackgroundProcess(tokenlist* tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector)
 {
-	if (has_pipe) {
-		int status;
-		pid_t PID = fork();
-		if (PID == 0){
-			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
-			piping(tokens);
-			printf("[ %d ] + done [ ", JOB_NUMBER);
-			printList(tokens);
-			printf("]\n");
-			exit(0);
-		}
-		waitpid(PID, &status, WNOHANG);
-	}
-	else if (has_redirector) {
-		int status;
-		pid_t PID = fork();
-		if (PID != 0)
+    if (has_pipe) 
+	{
+        // int status;
+        pid_t PID = fork();
+        if (PID == 0) {
+            piping(tokens);
+            exit(0);
+        }
+
+		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		free(commandLine(tokens));
+
+        printf("[ %d ] [ %d ]\n", JOB_NUMBER, PID);
+
+    }
+    else if (has_redirector) {
+        // int status;
+        pid_t PID = fork();
+        if (PID == 0) {
+            // char * cmdLine = commandLine(tokens);
+            // storeBackgroundProcessInfo(JOB_NUMBER, PID, cmdLine);
+            // free(cmdLine);
+            // piping(tokens);
+			// storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+			// free(commandLine(tokens));
+            // printf("[%d] [%d]\n", JOB_NUMBER, PID);
+            // waitpid(PID, &status, 0);
+            // printf("[ %d ] + done %s\n", JOB_NUMBER, cmdLine);
+			ioRedirection(tokens);
+            exit(0);
+        }
+		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		free(commandLine(tokens));
+
+        printf("[ %d ] [ %d ]\n", JOB_NUMBER, PID);
+    }
+    else {
+        // int status;
+        pid_t PID = fork();
+
+        // storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+        // free(commandLine(tokens));
+
+        if (PID == 0) 
 		{
-			printf("[%d] [%d]\n", JOB_NUMBER, PID);
-			piping(tokens);
-			printf("[ %d ] + done [ ", JOB_NUMBER);
-			printList(tokens);
-			printf("]\n");
+			
+            int status2;
+            pid_t pid2 = fork();
+            if (pid2 == 0) {
+                char* argv[tokens->size + 1];
+                for (int i = 0; i < tokens->size; i++) {
+                    argv[i] = tokens->items[i];
+                }
+                argv[tokens->size] = NULL;
+
+                execv(pathSearch(tokens), argv);
+
+            }
+
+			
+            waitpid(pid2, &status2, 0);
+			// pid_t result = waitpid(pid2, &status, WNOHANG);
+			// printf("\nThis is result: %d\n", result);
+
+            if (WIFEXITED(status2)) 
+			{
+                printf("\n[ %d ] + done %s\n", JOB_NUMBER, commandLine(tokens));
+            }
 			exit(0);
-		}
-		waitpid(PID, &status, WNOHANG);
-	}
-	else {
-		int status;
-		pid_t PID = fork();
+        }
+
 		
-		if (PID == 0) // do only if child process
-		{
-			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
-			int status2;
-			pid_t pid2 = fork();
-			if (pid2 == 0) //child^2		
-			{	
-				char *argv[tokens->size + 1];
-				for (int i = 0; i < tokens->size; i++)
-				{
-					argv[i] = tokens->items[i];
-				}
-				argv[tokens->size] = NULL;
 
-				execv(pathSearch(tokens), argv);
-			}
-			waitpid(pid2, &status2, 0);
-			if (WIFEXITED(status2)) {
-				printf("[ %d ] + done [ ", JOB_NUMBER);
-				printList(tokens);
-				printf("]\n");
-			}
-		}
-		waitpid(PID, &status, WNOHANG); //don't wait for child process to finish
-	}
+        printf("[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
+
+		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		free(commandLine(tokens));
+		// waitpid(PID, &status, 0);
+    }
+
+    // Return to the prompt without waiting for child processes.
 }
-
-
 
 // Function to store the PID and command line of a background process
 void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine)
 {
-    // Find an empty slot in the backgroundProcessList and store the information
-    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
-    {
-        if (backgroundProcessList[i].pid == 0)
-        {
-            backgroundProcessList[i].jobNumber = jobNumber;
-            backgroundProcessList[i].pid = pid;
-            strncpy(backgroundProcessList[i].commandLine, commandLine, sizeof(backgroundProcessList[i].commandLine) - 1);
-            backgroundProcessList[i].commandLine[sizeof(backgroundProcessList[i].commandLine) - 1] = '\0';
-            break;
-        }
+	if (numBackgroundProcesses < MAX_BACKGROUND_PROCESSES) {
+        backgroundProcesses[numBackgroundProcesses].jobNumber = jobNumber;
+        backgroundProcesses[numBackgroundProcesses].pid = pid;
+        strncpy(backgroundProcesses[numBackgroundProcesses].commandLine, commandLine, sizeof(backgroundProcesses[numBackgroundProcesses].commandLine));
+        numBackgroundProcesses++;
+    } else {
+        fprintf(stderr, "Maximum number of background processes reached.\n");
     }
 }
 
-// Function to get the PID of a background process based on its job number
-pid_t getProcessPID(int jobNumber)
-{
-    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
-    {
-        if (backgroundProcessList[i].jobNumber == jobNumber)
-        {
-            return backgroundProcessList[i].pid;
-        }
-    }
-    return 0; // Return 0 if no matching job number is found (indicating an error)
-}
-
-// Function to get the command line of a background process based on its job number
-const char *getProcessCommandLine(int jobNumber)
-{
-    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
-    {
-        if (backgroundProcessList[i].jobNumber == jobNumber)
-        {
-            return backgroundProcessList[i].commandLine;
-        }
-    }
-    return NULL; // Return NULL if no matching job number is found (indicating an error)
-}
-
-bool isProcessActive(int jobNumber)
-{
-    // Get the PID of the background process based on its job number
-    pid_t pid = getProcessPID(jobNumber);
-
-    if (pid == 0)
-    {
-        // If no matching job number is found, consider the process inactive
-        return false;
-    }
-
-    // Check the status of the process using waitpid with WNOHANG
-    int status;
-    pid_t result = waitpid(pid, &status, WNOHANG);
-
-    if (result == -1)
-    {
-        // An error occurred while checking the process status
-        // You may want to handle this error case accordingly
-        return false;
-    }
-    else if (result == 0)
-    {
-        // The process is still running
-        return true;
-    }
-    else
-    {
-        // The process has terminated
-        return false;
-    }
-}
-
-void listActiveBackgroundProcesses()
-{
-    if (backgroundProcessesCount() == 0)
-    {
+// Function to list active background processes
+void listActiveBackgroundProcesses() {
+    if (numBackgroundProcesses == 0) {
         printf("No active background processes.\n");
-    }
-    else
-    {
+    } else {
         printf("Active background processes:\n");
-        printActiveBackgroundProcesses();
-    }
-}
-
-int backgroundProcessesCount()
-{
-    int count = 0;
-
-    // Loop through your background processes and count them.
-    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
-    {
-        // Check if the process with jobNumber 'i' is active (still running)
-        if (isProcessActive(i))
-        {
-            count++;
-        }
-    }
-
-    return count;
-}
-
-void printActiveBackgroundProcesses()
-{
-    // Implement this function to print the active background processes
-    // in the required format "[Job number]+ [CMD's PID] [CMD's command line]".
-
-    // You can iterate through your backgroundProcesses data structure
-    // and print the information for each active process.
-
-    for (int i = 0; i < MAX_HISTORY_SIZE; i++)
-    {
-        // Check if the process with jobNumber 'i' is active (still running)
-        if (isProcessActive(i))
-        {
-            // Print the information for the active process in the required format.
-            printf("[%d]+ [%d] %s\n", i, getProcessPID(i), getProcessCommandLine(i));
+        for (int i = 0; i < numBackgroundProcesses; i++) {
+            printf("[%d]+ [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
         }
     }
 }
 
+// Function to concatenate elements of the tokenlist into a single string
+char* commandLine(tokenlist* tokens) 
+{
+    int totalLength = 0;
+    for (int i = 0; i < tokens->size; i++) {
+        totalLength += strlen(tokens->items[i]) + 1; // +1 for space or null terminator
+    }
 
+    char* cmdline = (char*)malloc(totalLength);
+    if (cmdline == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+
+    strcpy(cmdline, tokens->items[0]);
+    for (int i = 1; i < tokens->size; i++) {
+        strcat(cmdline, " ");
+        strcat(cmdline, tokens->items[i]);
+    }
+
+    return cmdline;
+}
 
 char *get_input(void)
 {

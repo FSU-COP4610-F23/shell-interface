@@ -23,15 +23,13 @@ void historyCommandList(tokenlist * tokens, char * input);
 bool hasPipe(tokenlist * tokens);
 bool hasRedirector(tokenlist * tokens);
 void executeAllCommands(tokenlist * tokens, char * input);
+char* commandLine(tokenlist* tokens);
+void checkBackgroundProcesses();
 
 void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector);
 void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine);
-pid_t getProcessPID(int jobNumber);
-const char *getProcessCommandLine(int jobNumber);
-bool isProcessActive(int jobNumber);
 void listActiveBackgroundProcesses();
-void printActiveBackgroundProcesses();
-int backgroundProcessesCount();
+
 
 
 char * get_input(void);
