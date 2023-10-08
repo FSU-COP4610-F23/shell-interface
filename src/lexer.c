@@ -608,15 +608,23 @@ char * internalCommandExecution(tokenlist * tokens)
 			add_token(tokens, tokens->items[1]);
 			chdir(tokens->items[1]);
 		}
-		else if (tokens->size > 2) //if there are more than one argumenr
+		else if(strcmp(tokens->items[1], "~")==0)
+		{
+			tokens->items[1] = tildeExpansion(tokens);
+			chdir(tokens->items[1]);
+		}
+		else if (tokens->size > 2) //if is are more than one argument
 		{
 			printf("Error: More than one argument is present\n");
 		}
-		else if (access(tokens->items[1], F_OK)==-1)
+		else if (access(tokens->items[1], F_OK) == -1)
 		{
 			printf("Error: target does not exist\n");
 		}
-		chdir(tokens->items[1]);
+		else
+		{
+			chdir(tokens->items[1]);
+		}
 	}
 	else if (strcmp(tokens->items[0], "jobs") == 0)
 	{
@@ -791,6 +799,7 @@ void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLin
         backgroundProcesses[numBackgroundProcesses].jobNumber = jobNumber;
         backgroundProcesses[numBackgroundProcesses].pid = pid;
         strncpy(backgroundProcesses[numBackgroundProcesses].commandLine, commandLine, sizeof(backgroundProcesses[numBackgroundProcesses].commandLine));
+		// backgroundProcesses[numBackgroundProcesses].status = 1; // Initially set as running
         numBackgroundProcesses++;
     } else {
         fprintf(stderr, "Maximum number of background processes reached.\n");
@@ -798,7 +807,8 @@ void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLin
 }
 
 // Function to list active background processes
-void listActiveBackgroundProcesses() {
+void listActiveBackgroundProcesses() 
+{
     if (numBackgroundProcesses == 0) {
         printf("No active background processes.\n");
     } else {
