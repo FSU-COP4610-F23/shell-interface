@@ -16,7 +16,7 @@ struct commandHistory history;
 
 // Define a global array to store background process information
 backgroundProcess backgroundProcesses[MAX_BACKGROUND_PROCESSES];
-int numBackgroundProcesses = 0;
+int activeBackgroundProcesses = 0;
 
 int main()
 {
@@ -68,10 +68,6 @@ void executeAllCommands(tokenlist *tokens, char *input)
 		else if (hasPipe(tokens))
 		{
 			piping(tokens);
-		}
-		else if (hasRedirector(tokens))
-		{
-			ioRedirection(tokens);
 		}
 		else
 		{
@@ -141,12 +137,11 @@ bool hasRedirector(tokenlist *tokens)
 	bool hasRedirector = false;
 	for (size_t i = 0; i < tokens->size; i++)
 	{
-		if (strcmp(tokens->items[i], "|") == 0)
+		if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0)
 		{
 			// has_pipe = 1;
 			hasRedirector = true;
 			return hasRedirector;
-			break;
 		}
 	}
 	return false;
@@ -615,14 +610,16 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 		pid_t PID = fork();
 		if (PID == 0)
 		{
+			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());		
 			piping(tokens);
+			printf("\n[ %d ] + done %s\n", JOB_NUMBER, commandLine(tokens));
 			exit(0);
 		}
 
-		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		storeBackgroundProcessInfo(JOB_NUMBER, PID, commandLine(tokens));
 		free(commandLine(tokens));
 
-		printf("[ %d ] [ %d ]\n", JOB_NUMBER, PID);
+		
 	}
 	else if (has_redirector)
 	{
@@ -630,13 +627,24 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 		pid_t PID = fork();
 		if (PID == 0)
 		{
-			ioRedirection(tokens);
+			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
+			sleep(10);
+			pid_t pid2 = fork();
+			if (pid2 == 0) {
+				ioRedirection(tokens);
+				char *argv[tokens->size + 1];
+				for (int i = 0; i < tokens->size; i++)
+				{
+					argv[i] = tokens->items[i];
+				}
+				argv[tokens->size] = NULL;
+				execv(pathSearch(tokens), argv);
+				}
+			printf("\n[ %d ] + done %s\n", JOB_NUMBER, commandLine(tokens));
 			exit(0);
 		}
-		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		storeBackgroundProcessInfo(JOB_NUMBER, PID, commandLine(tokens));		
 		free(commandLine(tokens));
-
-		printf("[ %d ] [ %d ]\n", JOB_NUMBER, PID);
 	}
 	else
 	{
@@ -648,7 +656,7 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 
 		if (PID == 0)
 		{
-
+			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
 			int status2;
 			pid_t pid2 = fork();
 			if (pid2 == 0)
@@ -673,11 +681,9 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 			}
 			exit(0);
 		}
-
-		printf("[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
-
-		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
+		storeBackgroundProcessInfo(JOB_NUMBER, PID, commandLine(tokens));
 		free(commandLine(tokens));
+
 		// waitpid(PID, &status, 0);
 	}
 
@@ -687,17 +693,17 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 // Function to store the PID and command line of a background process
 void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine)
 {
-	if (numBackgroundProcesses < MAX_BACKGROUND_PROCESSES)
+	if (activeBackgroundProcesses < MAX_BACKGROUND_PROCESSES)
 	{
-		backgroundProcesses[numBackgroundProcesses].jobNumber = jobNumber;
-		backgroundProcesses[numBackgroundProcesses].pid = pid;
-		strncpy(backgroundProcesses[numBackgroundProcesses].commandLine, commandLine, sizeof(backgroundProcesses[numBackgroundProcesses].commandLine));
-		backgroundProcesses[numBackgroundProcesses].status = 1; // Initially set as running
-		numBackgroundProcesses++;
+		backgroundProcesses[JOB_NUMBER - 1].jobNumber = jobNumber;
+		backgroundProcesses[JOB_NUMBER - 1].pid = pid;
+		strncpy(backgroundProcesses[JOB_NUMBER - 1].commandLine, commandLine, sizeof(backgroundProcesses[JOB_NUMBER - 1].commandLine));
+		backgroundProcesses[JOB_NUMBER - 1].status = 1; // Initially set as running
+		activeBackgroundProcesses++;
 	}
 	else
 	{
-		fprintf(stderr, "Maximum number of background processes reached.\n");
+		fprintf(stderr, "Maximum number of active background processes reached.\n");
 	}
 }
 
@@ -707,10 +713,10 @@ void updateBackgroundProcessStatus()
 	int status;
 	pid_t pid;
 
-	for (int i = 0; i < numBackgroundProcesses; i++)
+	for (int i = 0; i < JOB_NUMBER; i++)
 	{
 		pid = waitpid(backgroundProcesses[i].pid, &status, WNOHANG);
-		if (pid == -1)
+		if (pid == -1 && backgroundProcesses[i].status != 0)
 		{
 			// Error handling if waitpid fails
 			perror("waitpid");
@@ -724,6 +730,7 @@ void updateBackgroundProcessStatus()
 		{
 			// Process has completed
 			backgroundProcesses[i].status = 0; // Update the status accordingly
+			activeBackgroundProcesses--;
 		}
 	}
 }
@@ -732,16 +739,17 @@ void updateBackgroundProcessStatus()
 void listActiveBackgroundProcesses()
 {
 	updateBackgroundProcessStatus();
-	if (numBackgroundProcesses == 0)
+	if (activeBackgroundProcesses == 0)
 	{
 		printf("No active background processes.\n");
 	}
 	else
 	{
 		printf("Active background processes:\n");
-		for (int i = 0; i < numBackgroundProcesses; i++)
+		for (int i = 0; i < JOB_NUMBER; i++)
 		{
-			printf("[%d] + [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
+			if (backgroundProcesses[i].status == 1)
+				printf("[%d] + [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
 		}
 	}
 }
