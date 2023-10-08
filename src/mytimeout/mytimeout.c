@@ -1,93 +1,113 @@
-#define _POSIX_SOURCE
+#define _POSIX_C_SOURCE 200809L // Define _POSIX_C_SOURCE before including any headers
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
-#include <sys/wait.h>
 #include <sys/types.h>
-#include <string.h>
-#include "mytimeout.h"
+#include <sys/wait.h>
+#include <signal.h> // Include this header for kill and SIGTERM
+#include "lexer.h" 
 
-volatile sig_atomic_t timeout_flag = 0;
+// int main(int argc, char *argv[]) {
+//     if (argc < 3) {
+//         fprintf(stderr, "Usage: %s [seconds] [command] [command-args]\n", argv[0]);
+//         return 1;
+//     }
 
-void handle_timeout(int signum) {
-    timeout_flag = 1;
-}
+//     int timeout_seconds = atoi(argv[1]);
+//     if (timeout_seconds <= 0) {
+//         fprintf(stderr, "Invalid timeout value\n");
+//         return 1;
+//     }
 
-int main(int argc, char *argv[]) 
-{
+//     pid_t child_pid = fork();
 
-    create_timeout(argc, argv);
-    return 0;
-}
+//     if (child_pid == -1) {
+//         perror("fork");
+//         return 1;
+//     }
+
+//     if (child_pid == 0) {
+//         // This code runs in the child process
+//         char *cmd = argv[2];
+//         char **cmd_args = &argv[2];
+
+//         execvp(cmd, cmd_args);
+//         perror("execvp"); // If execvp fails, print an error
+//         exit(1);
+//     } else {
+//         // This code runs in the parent process
+//         sleep(timeout_seconds);
+
+//         // Try to terminate the child process gracefully
+//         int status;
+//         if (waitpid(child_pid, &status, WNOHANG) == 0) {
+//             // Child process is still running; send a termination signal
+//             kill(child_pid, SIGTERM);
+//         }
+
+//         // Wait for the child process to finish
+//         waitpid(child_pid, &status, 0);
+
+//         if (WIFEXITED(status)) {
+//             return WEXITSTATUS(status);
+//         } else {
+//             fprintf(stderr, "Child process terminated abnormally\n");
+//             return 1;
+//         }
+//     }
+
+//     return 0;
+// }
 
 
-void create_timeout(int argc, char *argv[]) 
-{
-    printf("We go in here\n");
-    if (argc < 2) 
-    {
-        fprintf(stderr, "Usage: %s <command> [args...]\n", argv[0]);
-        exit(EXIT_FAILURE);
+int execute_with_timeout(tokenlist *tokens, int timeout_seconds) {
+    if (tokens->size < 2) {
+        fprintf(stderr, "Usage: %s [seconds] [command] [command-args]\n", tokens->items[0]);
+        return 1;
     }
 
-    signal(SIGALRM, handle_timeout);
-
-    // Set a timeout of 5 seconds (adjust as needed) //
-    alarm(argc);
-
-    pid_t child_pid = fork(); // fork 
-
-    if (child_pid == -1) 
-    {
-        perror("Fork failed");
-        exit(EXIT_FAILURE);
+    timeout_seconds = atoi(tokens->items[1]);
+    if (timeout_seconds <= 0) {
+        fprintf(stderr, "Invalid timeout value\n");
+        return 1;
     }
 
-    if (child_pid == 0) // if in the child process
-    {
-        char *cmd = argv[1]; // Get the command from arguments
+    pid_t child_pid = fork();
 
-        // Perform a PATH search to find the full path of the command
-        char *path = getenv("PATH");
-        char *token = strtok(path, ":");
-        while (token != NULL) {
-            char command_path[256]; // Adjust the size as needed
-            snprintf(command_path, sizeof(command_path), "%s/%s", token, cmd);
+    if (child_pid == -1) {
+        perror("fork");
+        return 1;
+    }
 
-            if (access(command_path, X_OK) == 0) {
-                // Execute the command with arguments
-                execv(command_path, argv + 1);
-                perror("execv failed");
-                exit(EXIT_FAILURE);
-            }
+    if (child_pid == 0) {
+        // This code runs in the child process
+        char *cmd = tokens->items[2];
+        char **cmd_args = &(tokens->items[2]);
 
-            token = strtok(NULL, ":");
+        execvp(cmd, cmd_args);
+        perror("execvp"); // If execvp fails, print an error
+        exit(1);
+    } else {
+        // This code runs in the parent process
+        sleep(timeout_seconds);
+
+        // Try to terminate the child process gracefully
+        int status;
+        if (waitpid(child_pid, &status, WNOHANG) == 0) {
+            // Child process is still running; send a termination signal
+            kill(child_pid, SIGTERM);
         }
 
-        // If the command is not found in PATH
-        fprintf(stderr, "Command not found: %s\n", cmd);
-        exit(EXIT_FAILURE);
-    } 
-    else 
-    {
-        // Parent process
-        printf("Waiting for child process...\n");
-        int status;
+        // Wait for the child process to finish
         waitpid(child_pid, &status, 0);
 
         if (WIFEXITED(status)) {
-            printf("Child process exited with status %d\n", WEXITSTATUS(status));
-        } else if (WIFSIGNALED(status)) {
-            printf("Child process terminated by signal %d\n", WTERMSIG(status));
-        }
-
-        if (timeout_flag) {
-            printf("Timeout occurred. Killing child process.\n");
-            kill(child_pid, SIGKILL); // Send SIGKILL to child process
+            return WEXITSTATUS(status);
+        } else {
+            fprintf(stderr, "Child process terminated abnormally\n");
+            return 1;
         }
     }
-
+                                       
     return 0;
-
 }

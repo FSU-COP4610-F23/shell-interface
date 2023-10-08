@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "mytimeout.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,48 +66,6 @@ void executeAllCommands(tokenlist * tokens, char * input)
 	{
 		historyCommandList(tokens, input);
 
-		/*
-		// Check for input or output redirection
-		int input_redirection = -1;  // Index of "<" token
-		int output_redirection = -1; // Index of ">" token
-
-		for (int i = 0; i < tokens->size; i++)
-		{
-			if (strcmp(tokens->items[i], "<") == 0)
-			{
-				input_redirection = i;
-			}
-			else if (strcmp(tokens->items[i], ">") == 0)
-			{
-				output_redirection = i;
-			}
-		}
-			
-		
-	
-		// Call ioRedirection function to handle redirection
-		if (input_redirection != -1 || output_redirection != -1)
-		{
-			ioRedirection(tokens);
-		}
-		*/
-
-		
-		// int has_redirector = 0;
-		// for (size_t i = 0; i < tokens->size; i++) 
-		// {
-		// 	if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0) 
-		// 	{
-		// 		has_redirector = 1;
-		// 		break;
-		// 	}
-		// }
-		// if (has_redirector) 
-		// {
-		// 	// Execute piped commands
-		// 	ioRedirection(tokens);
-		// }
-
 
 		//check if last token is &
 		if (strcmp(tokens->items[tokens->size - 1], "&") == 0) {
@@ -134,6 +93,26 @@ void executeAllCommands(tokenlist * tokens, char * input)
 			{
 				// running inernal command execution
 				internalCommandExecution(tokens);			
+			}
+			
+			else if (strcmp(tokens->items[0], "./mytimeout") == 0)
+			{
+				int timeout_seconds = 5; // Example timeout value
+				if (tokens->size >= 2) 
+				{
+        			timeout_seconds = atoi(tokens->items[1]); // Use the specified timeout value
+    			}
+
+				int result = execute_with_timeout(tokens, timeout_seconds); // Use the timeout function
+
+				if (result == 0) {
+					printf("Command executed successfully.\n");
+				} else {
+					printf("Command execution failed.\n");
+				}
+
+				free_tokens(tokens); // Free the tokenlist when done
+
 			}
 			else
 			{
@@ -444,6 +423,7 @@ char * ExternalCommandExec(tokenlist * tokens, char * filePath)
 
 	return 0;
 }
+
 
 char * piping(tokenlist *tokens) 
 {

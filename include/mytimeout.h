@@ -1,7 +1,8 @@
 #ifndef TIMEOUT_H
 #define TIMEOUT_H
 
-// Function to create a timeout
-void create_timeout(int argc, char *argv[]);
+#include "lexer.h"
+
+int execute_with_timeout(tokenlist *tokens, int timeout_seconds);
 
 #endif /* TIMEOUT_H */
