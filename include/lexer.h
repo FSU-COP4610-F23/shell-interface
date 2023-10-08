@@ -4,10 +4,26 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+
+#define MAX_HISTORY_SIZE 3
+#define MAX_BACKGROUND_PROCESSES 10
+
 typedef struct {
     char ** items;
     size_t size;
 } tokenlist;
+
+struct commandHistory {
+    char commands[MAX_HISTORY_SIZE][200]; // Assuming commands are less than 200 characters
+    int count;
+};
+
+typedef struct  {
+    int jobNumber;
+    pid_t pid;
+    char commandLine[256];
+	int status;
+} backgroundProcess;
 
 char * environmentVariables(tokenlist * tokens);
 char * tildeExpansion(tokenlist * tokens);
