@@ -95,25 +95,25 @@ void executeAllCommands(tokenlist * tokens, char * input)
 				internalCommandExecution(tokens);			
 			}
 			
-			else if (strcmp(tokens->items[0], "./mytimeout") == 0)
-			{
-				int timeout_seconds = 5; // Example timeout value
-				if (tokens->size >= 2) 
-				{
-        			timeout_seconds = atoi(tokens->items[1]); // Use the specified timeout value
-    			}
+			// else if (strcmp(tokens->items[0], "./mytimeout") == 0)
+			// {
+			// 	int timeout_seconds = 5; // Example timeout value
+			// 	if (tokens->size >= 2) 
+			// 	{
+        	// 		timeout_seconds = atoi(tokens->items[1]); // Use the specified timeout value
+    		// 	}
 
-				int result = execute_with_timeout(tokens, timeout_seconds); // Use the timeout function
+			// 	int result = execute_with_timeout(tokens, timeout_seconds); // Use the timeout function
 
-				if (result == 0) {
-					printf("Command executed successfully.\n");
-				} else {
-					printf("Command execution failed.\n");
-				}
+			// 	if (result == 0) {
+			// 		printf("Command executed successfully.\n");
+			// 	} else {
+			// 		printf("Command execution failed.\n");
+			// 	}
 
-				free_tokens(tokens); // Free the tokenlist when done
+			// 	free_tokens(tokens); // Free the tokenlist when done
 
-			}
+			// }
 			else
 			{
 				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
