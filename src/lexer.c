@@ -69,10 +69,6 @@ void executeAllCommands(tokenlist *tokens, char *input)
 		{
 			piping(tokens);
 		}
-		else if (hasRedirector(tokens))
-		{
-			ioRedirection(tokens);
-		}
 		else
 		{
 			if (strcmp(tokens->items[0], "exit") == 0 || strcmp(tokens->items[0], "cd") == 0 || strcmp(tokens->items[0], "jobs") == 0)
@@ -138,18 +134,29 @@ bool hasRedirector(tokenlist *tokens)
 {
 	// Check if the input contains a pipe character
 	// int has_pipe = 0;
-	bool hasRedirector = false;
+	// bool has_Redirector = false;
 	for (size_t i = 0; i < tokens->size; i++)
 	{
-		if (strcmp(tokens->items[i], "|") == 0)
+		if (strcmp(tokens->items[i], "<") == 0)
 		{
 			// has_pipe = 1;
-			hasRedirector = true;
-			return hasRedirector;
+			return true;
 			break;
 		}
 	}
+
+	for (size_t i = 0; i < tokens->size; i++)
+	{
+		if (strcmp(tokens->items[i], ">") == 0)
+		{
+			// has_pipe = 1;
+			return true;
+			break;
+		}
+	}
+
 	return false;
+
 }
 
 void printList(tokenlist *tokens)
@@ -616,6 +623,7 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 		if (PID == 0)
 		{
 			piping(tokens);
+			printf("\n[ %d ] + done %s\n", JOB_NUMBER, commandLine(tokens));
 			exit(0);
 		}
 
@@ -627,10 +635,12 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 	else if (has_redirector)
 	{
 		// int status;
+
 		pid_t PID = fork();
 		if (PID == 0)
 		{
 			ioRedirection(tokens);
+			printf("Do we go in here?\n");
 			exit(0);
 		}
 		storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
