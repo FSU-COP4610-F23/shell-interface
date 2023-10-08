@@ -262,6 +262,7 @@ void ioRedirection(tokenlist *tokens)
 	int input_redirection = -1;	 // File descriptor for input redirection
 	int output_redirection = -1; // File descriptor for output redirection
 
+	int tokenSize = tokens->size;
 	// Check for input redirection
 	for (int i = 0; i < tokens->size; i++)
 	{
@@ -285,7 +286,7 @@ void ioRedirection(tokenlist *tokens)
 	if (input_redirection != -1)
 	{
 		// Handle input redirection
-		if (input_redirection + 1 < tokens->size)
+		if (input_redirection + 1 < tokenSize)
 		{
 			char *input_file = tokens->items[input_redirection + 1];
 
@@ -328,7 +329,7 @@ void ioRedirection(tokenlist *tokens)
 	if (output_redirection != -1)
 	{
 		// Handle output redirection
-		if (output_redirection + 1 < tokens->size)
+		if (output_redirection + 1 < tokenSize)
 		{
 			char *output_file = tokens->items[output_redirection + 1];
 			// Open the output file for writing and replace standard output'
