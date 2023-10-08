@@ -293,6 +293,18 @@ void ioRedirection(tokenlist *tokens)
 		if (input_redirection + 1 < tokens->size)
 		{
 			char *input_file = tokens->items[input_redirection + 1];
+
+			if (access(input_file, F_OK) == -1)
+			{
+				int fd = open(input_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+				if (fd == -1)
+				{
+					perror("open");
+					exit(EXIT_FAILURE);
+				}
+				close(fd); 
+			}
+
 			// Open the input file for reading and replace standard input
 			close(0);
 			int fd = open(input_file, O_RDONLY);
