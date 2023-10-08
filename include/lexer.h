@@ -29,7 +29,7 @@ void checkBackgroundProcesses();
 void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector);
 void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine);
 void listActiveBackgroundProcesses();
-
+void updateBackgroundProcessStatus();
 
 
 char * get_input(void);

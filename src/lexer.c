@@ -23,6 +23,7 @@ typedef struct {
     int jobNumber;
     pid_t pid;
     char commandLine[256];
+	int status;
 } backgroundProcess;
 
 struct commandHistory history;
@@ -799,22 +800,44 @@ void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLin
         backgroundProcesses[numBackgroundProcesses].jobNumber = jobNumber;
         backgroundProcesses[numBackgroundProcesses].pid = pid;
         strncpy(backgroundProcesses[numBackgroundProcesses].commandLine, commandLine, sizeof(backgroundProcesses[numBackgroundProcesses].commandLine));
-		// backgroundProcesses[numBackgroundProcesses].status = 1; // Initially set as running
+		backgroundProcesses[numBackgroundProcesses].status = 1; // Initially set as running
         numBackgroundProcesses++;
     } else {
         fprintf(stderr, "Maximum number of background processes reached.\n");
     }
 }
 
+// Function to update the status of background processes
+void updateBackgroundProcessStatus() {
+    int status;
+    pid_t pid;
+
+    for (int i = 0; i < numBackgroundProcesses; i++) 
+	{
+        pid = waitpid(backgroundProcesses[i].pid, &status, WNOHANG);
+        if (pid == -1) {
+            // Error handling if waitpid fails
+            perror("waitpid");
+        } else if (pid == 0) {
+            // Process is still running
+            backgroundProcesses[i].status = 1; // You can define status codes as needed
+        } else {
+            // Process has completed
+            backgroundProcesses[i].status = 0; // Update the status accordingly
+        }
+    }
+}
+
 // Function to list active background processes
-void listActiveBackgroundProcesses() 
+void listActiveBackgroundProcesses()
 {
+	updateBackgroundProcessStatus();
     if (numBackgroundProcesses == 0) {
         printf("No active background processes.\n");
     } else {
         printf("Active background processes:\n");
         for (int i = 0; i < numBackgroundProcesses; i++) {
-            printf("[%d]+ [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
+            printf("[%d] + [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
         }
     }
 }
