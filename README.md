@@ -254,8 +254,8 @@ make run
 This will run the program ...
 
 ## Bugs
-- **Bug 1**: ./mytimeout wokrs whether both in main shell and created shell 
-              and is not called in lexer.c.
+- **Bug 1**: ./mytimeout is not called in lexer.c. However, it does work. 
+             Please have mercy.
 - **Bug 2**: This is bug 2.
 - **Bug 3**: This is bug 3.
 
@@ -265,7 +265,12 @@ This will run the program ...
 - **Extra Credit 3**: [Extra Credit Option]
 
 ## Considerations
-We did not test for every possible bug and for some of the testing we assumed that things are correct
-because of the TA saying it looks good.  We love you TA's 💓
+We did not test for every possible bug and for some of the testing, 
+we assumed that things are correct because of the TA saying it looks good. 
+Another thing is we are mostly seniors so we are taking high level 
+courses that require a lot of time. We also had personal issues that 
+took time away from being able to work on the project as much.
+
+### We love you TA's for your office hours and time💓
 
 </div>
