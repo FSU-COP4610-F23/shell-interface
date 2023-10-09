@@ -254,7 +254,8 @@ make run
 This will run the program ...
 
 ## Bugs
-- **Bug 1**: This is bug 1.
+- **Bug 1**: ./mytimeout wokrs whether both in main shell and created shell 
+              and is not called in lexer.c.
 - **Bug 2**: This is bug 2.
 - **Bug 3**: This is bug 3.
 
