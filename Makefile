@@ -32,6 +32,6 @@ run: $(BIN)/$(SHELL_EXECUTABLE)
 	$<
 
 clean:
-	rm -f $(OBJ)/*.o $(BIN)/$(SHELL_EXECUTABLE) $(MYTIMEOUT_EXECUTABLE)
+	rm -rf $(OBJ)/*.o $(BIN)/$(SHELL_EXECUTABLE) $(MYTIMEOUT_EXECUTABLE) $(OBJ) $(BIN)
 
 .PHONY: run clean all

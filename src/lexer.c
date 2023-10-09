@@ -751,11 +751,7 @@ void updateBackgroundProcessStatus()
 void listActiveBackgroundProcesses()
 {
 	updateBackgroundProcessStatus();
-	if (activeBackgroundProcesses == 0)
-	{
-		printf("No active background processes.\n");
-	}
-	else
+	if (activeBackgroundProcesses > 0)
 	{
 		printf("Active background processes:\n");
 		for (int i = 0; i < JOB_NUMBER; i++)
@@ -766,6 +762,10 @@ void listActiveBackgroundProcesses()
 				backgroundProcesses[i].pid, 
 				backgroundProcesses[i].commandLine);
 		}
+	}
+	else
+	{
+		printf("No active background processes.\n");
 	}
 }
 
