@@ -63,7 +63,9 @@ void executeAllCommands(tokenlist *tokens, char *input)
 				add_token(tokens2, tokens->items[i]);
 			}
 			JOB_NUMBER++;
-			BackgroundProcess(tokens2, JOB_NUMBER, hasPipe(tokens), hasRedirector(tokens));
+			BackgroundProcess(tokens2, JOB_NUMBER, 
+			hasPipe(tokens), 
+			hasRedirector(tokens));
 		}
 		else if (hasPipe(tokens))
 		{
@@ -71,14 +73,16 @@ void executeAllCommands(tokenlist *tokens, char *input)
 		}
 		else
 		{
-			if (strcmp(tokens->items[0], "exit") == 0 || strcmp(tokens->items[0], "cd") == 0 || strcmp(tokens->items[0], "jobs") == 0)
+			if (strcmp(tokens->items[0], "exit") == 0 
+			|| strcmp(tokens->items[0], "cd") == 0 
+			|| strcmp(tokens->items[0], "jobs") == 0)
 			{
 				// running inernal command execution
 				internalCommandExecution(tokens);
 			}
 			else
 			{
-				tokens->items[1] = environmentVariables(tokens); // what happens to previous memory in token->items[1]?
+				tokens->items[1] = environmentVariables(tokens);
 				tokens->items[1] = tildeExpansion(tokens);
 				tokens->items[0] = pathSearch(tokens);
 				ExternalCommandExec(tokens, tokens->items[0]);
@@ -137,7 +141,8 @@ bool hasRedirector(tokenlist *tokens)
 	bool hasRedirector = false;
 	for (size_t i = 0; i < tokens->size; i++)
 	{
-		if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0)
+		if (strcmp(tokens->items[i], "<") == 0 
+		   || strcmp(tokens->items[i], ">") == 0)
 		{
 			// has_pipe = 1;
 			hasRedirector = true;
@@ -173,12 +178,12 @@ char *environmentVariables(tokenlist *tokens)
 	{
 		if (tokens->items[i][0] == '$')
 		{
+			 // put each character into tokenItems
 			char tokenItems[20] = "";
-			strcat(tokenItems, &tokens->items[i][1]); // put each character into tokenItems
+			strcat(tokenItems, &tokens->items[i][1]);
 			char *expand = malloc(sizeof(char) * strlen(getenv(tokenItems)));
 			strcpy(expand, getenv(tokenItems));
-			// strcpy(tokens->items[i], getenv(tokenItems)); // tokens->items[i] = getenv(tokenItems)
-			// free_tokens(tokens);
+
 			return expand;
 		}
 	}
@@ -205,7 +210,8 @@ char *tildeExpansion(tokenlist *tokens)
 				return expand;
 			}
 
-			char *expand2 = malloc(sizeof(char) * (strlen(getenv("HOME")) + strlen(tokenItems)) + 1);
+			char *expand2 = malloc(sizeof(char) * (strlen(getenv("HOME"))
+			                    + strlen(tokenItems)) + 1);
 			strcpy(expand2, getenv("HOME"));
 			strcat(expand2, tokenItems);
 			return expand2;
@@ -230,15 +236,16 @@ char *pathSearch(tokenlist *tokens)
 
 		if (!check)
 		{
-			char *tempFilePath = malloc(sizeof(char) * strlen(token) + strlen(tokens->items[0]) + 2);
+			char *tempFilePath = malloc(sizeof(char) * strlen(token) + 
+			                  strlen(tokens->items[0]) + 2);
 			// save strlen(token)
 			strcpy(tempFilePath, token);
 			strcat(tempFilePath, "/");
-			strcat(tempFilePath, tokens->items[0]); // incecrement ls into first token
+			strcat(tempFilePath, tokens->items[0]); // incecrement
 			if (fopen(tempFilePath, "r") != NULL)
 			{
 				check = true;
-				filePath = tempFilePath; // filePath ptr points to tempFilePath memory address
+				filePath = tempFilePath; 
 			}
 			else
 			{
@@ -259,8 +266,8 @@ char *pathSearch(tokenlist *tokens)
 
 void ioRedirection(tokenlist *tokens)
 {
-	int input_redirection = -1;	 // File descriptor for input redirection
-	int output_redirection = -1; // File descriptor for output redirection
+	int input_redirection = -1;	
+	int output_redirection = -1; 
 
 	int tokenSize = tokens->size;
 	// Check for input redirection
@@ -312,7 +319,7 @@ void ioRedirection(tokenlist *tokens)
 			// dup2(fd, STDIN_FILENO);
 			// close(fd);
 
-			// Remove the redirection tokens and the input file from the token list
+			// Remove the redirection tokens and the input file
 			for (int i = input_redirection; i < tokens->size - 2; i++)
 			{
 				tokens->items[i] = tokens->items[i + 2];
@@ -344,7 +351,7 @@ void ioRedirection(tokenlist *tokens)
 			// dup2(fd, STDOUT_FILENO);
 			// close(fd);
 
-			// Remove the redirection tokens and the output file from the token list
+			// Remove the redirection tokens 
 			for (int i = output_redirection; i < tokens->size - 2; i++)
 			{
 				tokens->items[i] = tokens->items[i + 2];
@@ -370,7 +377,8 @@ char *ExternalCommandExec(tokenlist *tokens, char *filePath)
 		int has_redirector = 0;
 		for (size_t i = 0; i < tokens->size; i++)
 		{
-			if (strcmp(tokens->items[i], "<") == 0 || strcmp(tokens->items[i], ">") == 0)
+			if (strcmp(tokens->items[i], "<") == 0 
+			|| strcmp(tokens->items[i], ">") == 0)
 			{
 				has_redirector = 1;
 				break;
@@ -412,14 +420,15 @@ char *piping(tokenlist *tokens)
 			pipeCount++;
 		}
 	}
-	// pipe has to be more than one. Pipe cannot be located as the first character, and cannot be last character
-	if (pipeCount < 1 || pipePositions[0] == 0 || pipePositions[pipeCount - 1] == numTokens - 1)
+	// pipe has to be more than one.
+	if (pipeCount < 1 || pipePositions[0] == 0 
+	  || pipePositions[pipeCount - 1] == numTokens - 1)
 	{
 		fprintf(stderr, "Invalid input: Missing command(s)\n");
 		return 0;
 	}
 
-	// Create an array of tokenlists for commands (There can be two and three commands)
+	// Create an array of tokenlists for commands
 	tokenlist *commands[3] = {NULL};
 	for (int i = 0; i <= pipeCount; i++) // based on the number of new tokens
 	{
@@ -543,7 +552,7 @@ char *internalCommandExecution(tokenlist *tokens)
 
 		if (history.count > 3)
 		{
-			start = history.count - 3; // if we pass three commands then start from 1 again
+			start = history.count - 3; 
 		}
 		else if (history.count < 3 && history.count > 0)
 		{
@@ -603,7 +612,10 @@ char *internalCommandExecution(tokenlist *tokens)
 	return tokens->items[1];
 }
 
-void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector)
+void BackgroundProcess(tokenlist *tokens, 
+                       int JOB_NUMBER, 
+                       bool has_pipe, 
+	                     bool has_redirector)
 {
 	if (has_pipe)
 	{
@@ -652,9 +664,6 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 		// int status;
 		pid_t PID = fork();
 
-		// storeBackgroundProcessInfo(JOB_NUMBER, getpid(), commandLine(tokens));
-		// free(commandLine(tokens));
-
 		if (PID == 0)
 		{
 			printf("\n[ %d ] [ %d ]\n", JOB_NUMBER, getpid());
@@ -673,8 +682,6 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 			}
 
 			waitpid(pid2, &status2, 0);
-			// pid_t result = waitpid(pid2, &status, WNOHANG);
-			// printf("\nThis is result: %d\n", result);
 
 			if (WIFEXITED(status2))
 			{
@@ -685,26 +692,30 @@ void BackgroundProcess(tokenlist *tokens, int JOB_NUMBER, bool has_pipe, bool ha
 		storeBackgroundProcessInfo(JOB_NUMBER, PID, commandLine(tokens));
 		free(commandLine(tokens));
 
-		// waitpid(PID, &status, 0);
 	}
 
-	// Return to the prompt without waiting for child processes.
 }
 
-// Function to store the PID and command line of a background process
-void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine)
+// Function to store the PID and command line 
+void storeBackgroundProcessInfo(int jobNumber, 
+                                pid_t pid, 
+                                const char *commandLine)
 {
 	if (activeBackgroundProcesses < MAX_BACKGROUND_PROCESSES)
 	{
 		backgroundProcesses[JOB_NUMBER - 1].jobNumber = jobNumber;
 		backgroundProcesses[JOB_NUMBER - 1].pid = pid;
-		strncpy(backgroundProcesses[JOB_NUMBER - 1].commandLine, commandLine, sizeof(backgroundProcesses[JOB_NUMBER - 1].commandLine));
-		backgroundProcesses[JOB_NUMBER - 1].status = 1; // Initially set as running
+		strncpy(backgroundProcesses[JOB_NUMBER - 1].commandLine, 
+		          commandLine, 
+		         sizeof(backgroundProcesses[JOB_NUMBER - 1].commandLine));
+		 // Initially set as running
+		backgroundProcesses[JOB_NUMBER - 1].status = 1;
 		activeBackgroundProcesses++;
 	}
 	else
 	{
-		fprintf(stderr, "Maximum number of active background processes reached.\n");
+		fprintf(stderr, 
+		"Maximum number of active background processes reached.\n");
 	}
 }
 
@@ -725,12 +736,12 @@ void updateBackgroundProcessStatus()
 		else if (pid == 0)
 		{
 			// Process is still running
-			backgroundProcesses[i].status = 1; // You can define status codes as needed
+			backgroundProcesses[i].status = 1; 
 		}
 		else
 		{
 			// Process has completed
-			backgroundProcesses[i].status = 0; // Update the status accordingly
+			backgroundProcesses[i].status = 0;
 			activeBackgroundProcesses--;
 		}
 	}
@@ -750,18 +761,22 @@ void listActiveBackgroundProcesses()
 		for (int i = 0; i < JOB_NUMBER; i++)
 		{
 			if (backgroundProcesses[i].status == 1)
-				printf("[%d] + [%d] running %s\n", backgroundProcesses[i].jobNumber, backgroundProcesses[i].pid, backgroundProcesses[i].commandLine);
+				printf("[%d] + [%d] running %s\n", 
+				backgroundProcesses[i].jobNumber, 
+				backgroundProcesses[i].pid, 
+				backgroundProcesses[i].commandLine);
 		}
 	}
 }
 
-// Function to concatenate elements of the tokenlist into a single string
+// Function to concatenate elements of the tokenlist 
 char *commandLine(tokenlist *tokens)
 {
 	int totalLength = 0;
 	for (int i = 0; i < tokens->size; i++)
 	{
-		totalLength += strlen(tokens->items[i]) + 1; // +1 for space or null terminator
+		 // +1 for space or null terminator
+		totalLength += strlen(tokens->items[i]) + 1;
 	}
 
 	char *cmdline = (char *)malloc(totalLength);
@@ -818,7 +833,8 @@ void add_token(tokenlist *tokens, char *item)
 {
 	int i = tokens->size;
 
-	tokens->items = (char **)realloc(tokens->items, (i + 2) * sizeof(char *));
+	tokens->items = (char **)realloc(tokens->items,
+									 (i + 2) * sizeof(char *));
 	tokens->items[i] = (char *)malloc(strlen(item) + 1);
 	tokens->items[i + 1] = NULL;
 	strcpy(tokens->items[i], item);

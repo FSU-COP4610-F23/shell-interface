@@ -14,7 +14,8 @@ typedef struct {
 } tokenlist;
 
 struct commandHistory {
-    char commands[MAX_HISTORY_SIZE][200]; // Assuming commands are less than 200 characters
+     // Assuming commands are less than 200 characters
+    char commands[MAX_HISTORY_SIZE][200];
     int count;
 };
 
@@ -42,8 +43,12 @@ void executeAllCommands(tokenlist * tokens, char * input);
 char* commandLine(tokenlist* tokens);
 void checkBackgroundProcesses();
 
-void BackgroundProcess(tokenlist * tokens, int JOB_NUMBER, bool has_pipe, bool has_redirector);
-void storeBackgroundProcessInfo(int jobNumber, pid_t pid, const char *commandLine);
+void BackgroundProcess(tokenlist * tokens, 
+int JOB_NUMBER, 
+bool has_pipe, bool has_redirector);
+void storeBackgroundProcessInfo(int jobNumber, 
+pid_t pid, 
+const char *commandLine);
 void listActiveBackgroundProcesses();
 void updateBackgroundProcessStatus();
 
